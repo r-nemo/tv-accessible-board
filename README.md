@@ -48,7 +48,7 @@ tv-communication-board/
 ## 利用方法
 
 ### GitHub Pages による常時ホスティング
-GitHub Pages が有効化されると、Fire TVのSilkブラウザから以下のURLで常時利用可能になります：
-* **バージョン1（50音表文字盤）**: `https://<username>.github.io/<repo>/`（または `/v1.html`）
-* **バージョン2（キーボード連携版）**: `https://<username>.github.io/<repo>/v2.html`
+GitHub Pages が有効化されているため、Fire TVのSilkブラウザから以下のURLで常時利用可能です：
+* **バージョン1（50音表文字盤）**: `https://r-nemo.github.io/tv-accessible-board/`（または `/v1.html`）
+* **バージョン2（キーボード連携版）**: `https://r-nemo.github.io/tv-accessible-board/v2.html`
 
