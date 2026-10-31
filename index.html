@@ -1,0 +1,977 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>テレビ用 デジタル文字盤</title>
+  <style>
+    :root {
+      --bg-color: #0e1015;
+      --card-bg: #1a1e27;
+      --card-border: #2c3344;
+      --text-color: #f0f3f8;
+      --accent-color: #ffe600;
+      --accent-text: #000000;
+      --action-speak: #00e676;
+      --action-delete: #ff5252;
+      --action-clear: #ff9100;
+      --phrase-color: #00b0ff;
+      --focus-glow: 0 0 24px rgba(255, 230, 0, 0.9), 0 0 8px #ffe600;
+    }
+
+    * {
+      box-sizing: border-box;
+      user-select: none;
+      -webkit-user-select: none;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background-color: var(--bg-color);
+      color: var(--text-color);
+      font-family: "Hiragino Kaku Gothic ProN", "Meiryo", "BIZ UDPGothic", sans-serif;
+      width: 100vw;
+      height: 100vh;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      padding: 2.5vh 3.5vw; /* TVオーバースキャン（外周見切れ）防止セーフエリア */
+    }
+
+    /* 上部：テキスト表示・アクションエリア */
+    header {
+      display: flex;
+      flex-direction: column;
+      gap: 1.2vh;
+      margin-bottom: 1.5vh;
+      flex-shrink: 0;
+    }
+
+    .display-row {
+      display: flex;
+      align-items: center;
+      gap: 1.2vw;
+      background: var(--card-bg);
+      border: 3px solid var(--card-border);
+      border-radius: 14px;
+      padding: 0.8vh 1.4vw;
+      min-height: 10vh;
+    }
+
+    .text-box {
+      flex: 1;
+      font-size: clamp(24px, 3.8vh, 46px);
+      font-weight: 700;
+      color: #ffffff;
+      min-height: 1.2em;
+      display: flex;
+      align-items: center;
+      overflow-x: auto;
+      white-space: nowrap;
+      letter-spacing: 0.08em;
+    }
+
+    .text-box:empty::before {
+      content: "リモコンの十字キーと決定で入力してください...";
+      color: #60687a;
+      font-weight: 400;
+      font-size: clamp(18px, 2.6vh, 30px);
+    }
+
+    .header-actions {
+      display: flex;
+      gap: 0.8vw;
+    }
+
+    /* 予測変換サジェスト枠 */
+    .suggest-row {
+      display: flex;
+      align-items: center;
+      gap: 0.8vw;
+      min-height: 6vh;
+    }
+
+    .suggest-label {
+      font-size: clamp(14px, 2vh, 22px);
+      color: #ffd54f;
+      font-weight: bold;
+      white-space: nowrap;
+    }
+
+    .suggest-list {
+      display: flex;
+      gap: 0.8vw;
+      flex: 1;
+      overflow-x: auto;
+    }
+
+    .suggest-list::-webkit-scrollbar {
+      display: none;
+    }
+
+    /* メインレイアウト（左：定型文、右：50音盤） */
+    main {
+      flex: 1;
+      display: grid;
+      grid-template-columns: 28% 70%;
+      gap: 2%;
+      min-height: 0; /* flex overflow防止 */
+    }
+
+    /* 共通ボタン基本デザイン */
+    button {
+      background: var(--card-bg);
+      border: 3px solid var(--card-border);
+      color: var(--text-color);
+      border-radius: 12px;
+      font-family: inherit;
+      font-weight: 700;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      transition: transform 0.08s ease, background-color 0.08s ease, box-shadow 0.08s ease, border-color 0.08s ease;
+      outline: none;
+    }
+
+    /* ★超高視認性フォーカス表示（テレビから離れていても一発で認識可能） */
+    button:focus,
+    button.focused {
+      background: var(--accent-color) !important;
+      color: var(--accent-text) !important;
+      border-color: #ffffff !important;
+      transform: scale(1.08);
+      box-shadow: var(--focus-glow);
+      z-index: 10;
+    }
+
+    /* ヘッダー操作ボタン */
+    .btn-action {
+      padding: 0 1.6vw;
+      height: 7.5vh;
+      font-size: clamp(18px, 2.6vh, 30px);
+    }
+    .btn-speak {
+      background: rgba(0, 230, 118, 0.15);
+      border-color: var(--action-speak);
+      color: #b9f6ca;
+    }
+    .btn-speak:focus,
+    .btn-speak.focused {
+      background: #00e676 !important;
+      color: #000 !important;
+    }
+    .btn-backspace {
+      background: rgba(255, 82, 82, 0.15);
+      border-color: var(--action-delete);
+      color: #ff8a80;
+    }
+    .btn-clear {
+      background: rgba(255, 145, 0, 0.15);
+      border-color: var(--action-clear);
+      color: #ffd180;
+    }
+
+    /* サジェストボタン */
+    .btn-suggest {
+      padding: 0 1.2vw;
+      height: 5.2vh;
+      font-size: clamp(14px, 2.2vh, 24px);
+      background: #142233;
+      border-color: #254060;
+      color: #80d8ff;
+      white-space: nowrap;
+    }
+
+    /* 左側：定型文パネル */
+    .phrase-panel {
+      display: flex;
+      flex-direction: column;
+      gap: 1.2vh;
+      height: 100%;
+    }
+    .panel-title {
+      font-size: clamp(14px, 2vh, 22px);
+      font-weight: bold;
+      color: #00b0ff;
+      padding-left: 0.3vw;
+    }
+    .phrase-grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      grid-template-rows: repeat(7, 1fr);
+      gap: 1.2vh;
+      flex: 1;
+    }
+    .btn-phrase {
+      font-size: clamp(16px, 2.3vh, 26px);
+      background: rgba(0, 176, 255, 0.12);
+      border-color: rgba(0, 176, 255, 0.4);
+      color: #e1f5fe;
+      justify-content: flex-start;
+      padding-left: 1.2vw;
+    }
+
+    /* 右側：50音パネル */
+    .keyboard-panel {
+      display: flex;
+      flex-direction: column;
+      height: 100%;
+    }
+    .key-grid {
+      display: grid;
+      grid-template-columns: repeat(10, 1fr);
+      grid-template-rows: repeat(5, 1fr);
+      gap: 0.9vh 0.6vw;
+      flex: 1;
+    }
+    .btn-key {
+      font-size: clamp(20px, 3.4vh, 38px);
+      width: 100%;
+      height: 100%;
+    }
+    /* 機能キー（濁点・小文字・長音等） */
+    .btn-mod {
+      background: #252836;
+      border-color: #434960;
+      color: #ffd54f;
+      font-size: clamp(15px, 2.4vh, 26px);
+    }
+
+    /* 最下部：ステータスバー・操作ガイド (削除) */
+
+    /* スリープ防止用の隠し動画 */
+    #wakeLockVideo {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      opacity: 0.01;
+      pointer-events: none;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- スリープ防止用微小ループ動画 -->
+  <video id="wakeLockVideo" muted loop playsinline autoplay></video>
+
+  <!-- 上部：テキスト＆操作エリア -->
+  <header>
+    <div class="display-row">
+      <div id="textBox" class="text-box"></div>
+      <div class="header-actions">
+        <button id="btnSpeak" class="btn-action btn-speak" data-nav="0,0">🗣️ はなす</button>
+        <button id="btnBack" class="btn-action btn-backspace" data-nav="0,1">⌫ 1文字消す</button>
+        <button id="btnClear" class="btn-action btn-clear" data-nav="0,2">✕ ぜんぶ消す</button>
+      </div>
+    </div>
+
+    <!-- 予測変換候補エリア -->
+    <div class="suggest-row">
+      <span class="suggest-label">予測:</span>
+      <div id="suggestList" class="suggest-list">
+        <!-- 動的にサジェスト候補が挿入されます -->
+      </div>
+    </div>
+  </header>
+
+  <!-- メイン：定型文 ＆ 50音表 -->
+  <main>
+    <!-- 左側：頻出定型文パネル -->
+    <section class="phrase-panel">
+      <div class="panel-title">⚡ よくつかう言葉</div>
+      <div class="phrase-grid">
+        <button class="btn-phrase" data-text="はい。">はい</button>
+        <button class="btn-phrase" data-text="いいえ。">いいえ</button>
+        <button class="btn-phrase" data-text="痛いです。">痛いです</button>
+        <button class="btn-phrase" data-text="たんを吸引してください。">吸引して</button>
+        <button class="btn-phrase" data-text="体位を変えてください。">体位変換</button>
+        <button class="btn-phrase" data-text="お水を飲みたいです。">水がほしい</button>
+        <button class="btn-phrase" data-text="ありがとうございます。">ありがとう</button>
+      </div>
+    </section>
+
+    <!-- 右側：50音キーボード -->
+    <section class="keyboard-panel">
+      <div class="key-grid" id="keyGrid">
+        <!-- 50音（あ〜わ行、濁点、小文字、記号）がJSからグリッド展開されます -->
+      </div>
+    </section>
+  </main>
+
+  <script>
+    /* ==========================================================================
+       1. 50音キーボード 定義データ（10列 × 5行）
+       あ行 〜 わ行 ＋ 濁点・半濁点・小文字変換キー
+       ========================================================================== */
+    const KANA_GRID = [
+      // 列0(あ) 列1(か) 列2(さ) 列3(た) 列4(な) 列5(は) 列6(ま) 列7(や) 列8(ら) 列9(わ)
+      ["あ", "か", "さ", "た", "な", "は", "ま", "や", "ら", "わ"],
+      ["い", "き", "し", "ち", "に", "ひ", "み", "（", "り", "を"],
+      ["う", "く", "す", "つ", "ぬ", "ふ", "む", "ゆ", "る", "ん"],
+      ["え", "け", "せ", "て", "ね", "へ", "め", "）", "れ", "ー"],
+      ["お", "こ", "そ", "と", "の", "ほ", "も", "よ", "ろ", "゛゜小"] // 濁点・半濁点・小文字トグルキー
+    ];
+
+    /* よく使われる予測変換辞書 */
+    const SUGGEST_DICTIONARY = {
+      "あ": ["ありがとう", "あたまが痛い", "あつい", "あしが痛い", "あさ"],
+      "い": ["いたい", "いいえ", "いつも", "いしゃ", "いっしょ"],
+      "う": ["うえを向きたい", "うごけない", "うでが痛い"],
+      "お": ["おねがい", "お水", "お茶", "お腹が痛い", "おわり"],
+      "か": ["からだが痛い", "かゆい", "かえてほしい", "かわいた"],
+      "き": ["きゅういん", "きもちわるい", "ききたい"],
+      "く": ["くびが痛い", "くすり", "くるしい", "くらい"],
+      "こ": ["こしが痛い", "これ", "こわい", "こえが出ない"],
+      "さ": ["さむい", "さわってほしい", "さようなら"],
+      "す": ["すこし待って", "すいぶん", "すわりたい"],
+      "た": ["たんを取って", "たいへん", "たすけて", "たべたい"],
+      "て": ["てがしびれる", "てをにぎって", "テレビを消して"],
+      "と": ["トイレ", "とめて", "となりにいて"],
+      "な": ["なんでもない", "なおして"],
+      "ね": ["ねむい", "ねむれない", "ねつがある"],
+      "の": ["のどが渇いた", "のみたい"],
+      "は": ["はい", "はなして", "はやい"],
+      "ひ": ["ひざが痛い", "ひやして"],
+      "み": ["みず", "みぎ", "みえない"],
+      "め": ["めが痛い", "めがね"],
+      "よ": ["よろしく", "よる", "よんでほしい"],
+      "わ": ["わかりました", "わからない"]
+    };
+
+    /* 濁点・半濁点・小文字の変換マップ */
+    const DAKUTEN_MAP = {
+      "か":"が","き":"ぎ","く":"ぐ","け":"げ","こ":"ご",
+      "さ":"ざ","し":"じ","す":"ず","せ":"ぜ","そ":"ぞ",
+      "た":"だ","ち":"ぢ","つ":"づ","て":"で","と":"ど",
+      "は":"ば","ひ":"び","ふ":"ぶ","へ":"べ","ほ":"ぼ",
+      // 逆変換
+      "が":"か","ぎ":"き","ぐ":"く","げ":"け","ご":"こ",
+      "ざ":"さ","じ":"し","ず":"す","ぜ":"せ","ぞ":"そ",
+      "だ":"た","ぢ":"ち","づ":"つ","で":"て","ど":"と",
+      "ば":"ぱ","び":"ぴ","ぶ":"ぷ","べ":"ぺ","ぼ":"ぽ",
+      "ぱ":"は","ぴ":"ひ","ぷ":"ふ","ぺ":"へ","ぽ":"ほ"
+    };
+
+    const SMALL_MAP = {
+      "あ":"ぁ","い":"ぃ","う":"ぅ","え":"ぇ","お":"ぉ",
+      "つ":"っ","や":"ゃ","ゆ":"ゅ","よ":"ょ",
+      "ぁ":"あ","ぃ":"い","ぅ":"う","ぇ":"え","ぉ":"お",
+      "っ":"つ","ゃ":"や","ゅ":"ゆ","ょ":"よ"
+    };
+
+    /* ==========================================================================
+       2. Web Audio API による物理キー感覚のクリック音生成
+       ========================================================================== */
+    let audioCtx = null;
+    function initAudio() {
+      if (!audioCtx) {
+        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      }
+      if (audioCtx.state === 'suspended') {
+        audioCtx.resume();
+      }
+    }
+
+    function playBeep(freq = 600, duration = 0.04, type = "sine") {
+      try {
+        initAudio();
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = type;
+        osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+        gain.gain.setValueAtTime(0.12, audioCtx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + duration);
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.start();
+        osc.stop(audioCtx.currentTime + duration);
+      } catch(e) {}
+    }
+
+    /* ==========================================================================
+       3. 空間フォーカス・ナビゲーション管理
+       ========================================================================== */
+    let allButtons = [];
+    let currentFocusIndex = 0;
+    const textBox = document.getElementById("textBox");
+    const suggestList = document.getElementById("suggestList");
+    const keyGrid = document.getElementById("keyGrid");
+    const ttsStatus = document.getElementById("ttsStatus");
+
+    // 50音グリッドのボタン生成
+    function createKeyGrid() {
+      keyGrid.innerHTML = "";
+      for (let r = 0; r < 5; r++) {
+        for (let c = 0; c < 10; c++) {
+          const char = KANA_GRID[r][c];
+          const btn = document.createElement("button");
+          btn.textContent = char;
+          btn.className = "btn-key";
+          btn.tabIndex = 0;
+          if (char === "゛゜小" || char === "（" || char === "）" || char === "ー") {
+            btn.classList.add("btn-mod");
+          }
+          btn.addEventListener("click", () => handleKeyInput(char));
+          keyGrid.appendChild(btn);
+        }
+      }
+    }
+
+    // フォーカス可能な全要素を収集して座標を更新
+    function refreshNavElements() {
+      const activeElement = allButtons[currentFocusIndex];
+      allButtons = Array.from(document.querySelectorAll("button:not([disabled])"));
+      allButtons.forEach(b => {
+        b.tabIndex = 0;
+      });
+
+      // 既存のフォーカス要素がリスト内に残っていれば、そのインデックスを維持する
+      if (activeElement && allButtons.includes(activeElement)) {
+        currentFocusIndex = allButtons.indexOf(activeElement);
+      } else if (currentFocusIndex >= allButtons.length) {
+        currentFocusIndex = 0;
+      }
+      updateFocusVisual();
+    }
+
+    function updateFocusVisual() {
+      allButtons.forEach((btn, idx) => {
+        if (idx === currentFocusIndex) {
+          btn.classList.add("focused");
+          btn.focus({ preventScroll: true }); // Silkブラウザにフォーカスを直接通知
+          btn.scrollIntoView({ block: "nearest", inline: "nearest" });
+        } else {
+          btn.classList.remove("focused");
+        }
+      });
+    }
+
+    // 2D幾何学的方向探索（テレビの十字キー移動に最も自然に追従するアルゴリズム）
+    function moveFocus(direction) {
+      if (!allButtons.length) return;
+      const currentBtn = allButtons[currentFocusIndex];
+
+      // ★要件1：50音表の「あ段（あ・か・さ・た・な・は・ま・や・ら・わ）」から「上」を押した時は、
+      // 変換候補があれば【必ず変換候補の1番最初】へジャンプ！
+      const aDanKeys = ["あ", "か", "さ", "た", "な", "は", "ま", "や", "ら", "わ"];
+      if (direction === "up" && currentBtn.classList.contains("btn-key") && aDanKeys.includes(currentBtn.textContent)) {
+        const firstSuggest = document.querySelector(".btn-suggest");
+        if (firstSuggest && allButtons.includes(firstSuggest)) {
+          currentFocusIndex = allButtons.indexOf(firstSuggest);
+          playBeep(480, 0.03, "sine");
+          updateFocusVisual();
+          return;
+        }
+      }
+
+      // 特例ルール：予測変換ボタンにいる状態で「上」を押した時は、確実に「🗣️ はなす」へ直接移動
+      if (direction === "up" && currentBtn.classList.contains("btn-suggest")) {
+        const btnSpeak = document.getElementById("btnSpeak");
+        if (btnSpeak && allButtons.includes(btnSpeak)) {
+          currentFocusIndex = allButtons.indexOf(btnSpeak);
+          playBeep(480, 0.03, "sine");
+          updateFocusVisual();
+          return;
+        }
+      }
+
+      // 特例ルール：ヘッダーボタン（はなす・消す）にいる状態で「下」を押した時は、予測変換があれば先頭へ、無ければ50音表の「あ」へ
+      if (direction === "down" && currentBtn.classList.contains("btn-action")) {
+        const firstSuggest = document.querySelector(".btn-suggest");
+        if (firstSuggest && allButtons.includes(firstSuggest)) {
+          currentFocusIndex = allButtons.indexOf(firstSuggest);
+          playBeep(480, 0.03, "sine");
+          updateFocusVisual();
+          return;
+        }
+      }
+
+      // 特例ルール：予測変換にいる状態で「下」を押した時は、50音表の「あ」へ戻る
+      if (direction === "down" && currentBtn.classList.contains("btn-suggest")) {
+        const aKey = Array.from(document.querySelectorAll(".btn-key")).find(b => b.textContent === "あ");
+        if (aKey && allButtons.includes(aKey)) {
+          currentFocusIndex = allButtons.indexOf(aKey);
+          playBeep(480, 0.03, "sine");
+          updateFocusVisual();
+          return;
+        }
+      }
+
+      const currentRect = currentBtn.getBoundingClientRect();
+      const currentCenter = {
+        x: currentRect.left + currentRect.width / 2,
+        y: currentRect.top + currentRect.height / 2
+      };
+
+      let bestIndex = -1;
+      let minDistance = Infinity;
+
+      allButtons.forEach((targetBtn, idx) => {
+        if (idx === currentFocusIndex) return;
+        const targetRect = targetBtn.getBoundingClientRect();
+        const targetCenter = {
+          x: targetRect.left + targetRect.width / 2,
+          y: targetRect.top + targetRect.height / 2
+        };
+
+        const dx = targetCenter.x - currentCenter.x;
+        const dy = targetCenter.y - currentCenter.y;
+
+        // 方向判定（テレビ画面全体で迷子にならないよう角度制限を完全撤廃）
+        let isCandidate = false;
+        if (direction === "up" && dy < -5) {
+          isCandidate = true;
+        } else if (direction === "down" && dy > 5) {
+          isCandidate = true;
+        } else if (direction === "left" && dx < -5) {
+          isCandidate = true;
+        } else if (direction === "right" && dx > 5) {
+          isCandidate = true;
+        }
+
+        if (isCandidate) {
+          // 主軸と直交軸に重み付けしたユークリッド距離
+          let dist = 0;
+          if (direction === "up" || direction === "down") {
+            dist = Math.abs(dy) * 1.0 + Math.abs(dx) * 1.5;
+          } else {
+            dist = Math.abs(dx) * 1.0 + Math.abs(dy) * 1.5;
+          }
+
+          if (dist < minDistance) {
+            minDistance = dist;
+            bestIndex = idx;
+          }
+        }
+      });
+
+      if (bestIndex !== -1) {
+        currentFocusIndex = bestIndex;
+        playBeep(480, 0.03, "sine");
+        updateFocusVisual();
+      }
+    }
+
+    /* ==========================================================================
+       4. 文字入力・テキスト操作ロジック
+       ========================================================================== */
+    function handleKeyInput(char) {
+      playBeep(880, 0.06, "triangle");
+
+      if (char === "゛゜小") {
+        // 直前文字の濁点・半濁点・小文字トグル
+        toggleModChar();
+      } else {
+        textBox.textContent += char;
+      }
+      updateSuggestions();
+    }
+
+    // 濁点・半濁点・小文字のトグル変換
+    function toggleModChar() {
+      const text = textBox.textContent;
+      if (!text.length) return;
+      const lastChar = text.slice(-1);
+      
+      let replaced = DAKUTEN_MAP[lastChar];
+      if (!replaced) {
+        replaced = SMALL_MAP[lastChar];
+      }
+      if (replaced) {
+        textBox.textContent = text.slice(0, -1) + replaced;
+      }
+    }
+
+    // 1文字消去
+    function backspace() {
+      playBeep(320, 0.05, "sawtooth");
+      const text = textBox.textContent;
+      if (text.length > 0) {
+        textBox.textContent = text.slice(0, -1);
+        updateSuggestions();
+      }
+    }
+
+    // 全消去
+    function clearText() {
+      playBeep(260, 0.08, "sawtooth");
+      textBox.textContent = "";
+      updateSuggestions();
+    }
+
+    // 予測変換・漢字変換候補の更新（Google日本語入力 CGI API ＋ 内蔵辞書ハイブリッド）
+    let jsonpCounter = 0;
+    let lastQueryText = "";
+
+    function updateSuggestions() {
+      suggestList.innerHTML = "";
+      const text = textBox.textContent;
+      if (!text.length) {
+        refreshNavElements();
+        return;
+      }
+
+      // 直近の入力ひらがな（最大10文字程度）
+      const query = text.slice(-8);
+      lastQueryText = query;
+
+      // 1. まず内蔵辞書から即時候補を生成して仮表示（遅延ゼロ）
+      const immediateList = getLocalCandidates(query, text);
+      renderSuggestButtons(immediateList, query);
+
+      // 2. Google CGI API for Japanese Input (JSONP) を非同期リクエスト
+      fetchGoogleIME(query);
+    }
+
+    // 内蔵の緊急・日常・医療辞書（オフラインでも超強力に動くフォールバック）
+    function getLocalCandidates(query, fullText) {
+      const candidates = new Set();
+      const last1 = query.slice(-1);
+      const last2 = query.slice(-2);
+
+      // 簡易漢字・常用語辞書
+      const DICT = {
+        "あり": ["ありがとう", "有難うございます"],
+        "あたま": ["頭が痛い", "頭"],
+        "いた": ["痛いです", "痛い", "痛み止め"],
+        "おね": ["お願いします", "お願い"],
+        "おみ": ["お水", "お水が飲みたい"],
+        "おちゃ": ["お茶", "温かいお茶"],
+        "きゅう": ["吸引してください", "吸引"],
+        "くる": ["苦しいです", "苦しい"],
+        "たい": ["体位変換", "体位を変えて", "動かして"],
+        "すい": ["水分", "吸ってください"],
+        "たん": ["たんを取って", "痰"],
+        "てれ": ["テレビをつけて", "テレビを消して"],
+        "とい": ["トイレ", "トイレに行きたい"],
+        "ねむ": ["眠いです", "眠れない"],
+        "のど": ["喉が渇いた", "喉"],
+        "あ": ["ありがとう", "あたまが痛い", "あつい"],
+        "い": ["いたい", "いいえ", "いしゃ"],
+        "う": ["うえを向きたい", "うごけない"],
+        "え": ["えあこん", "えがお"],
+        "お": ["おねがい", "お水", "お茶"],
+        "か": ["かゆい", "からだが痛い"],
+        "き": ["きゅういん", "きもちわるい"],
+        "く": ["くるしい", "くびが痛い"],
+        "け": ["けいたい", "けいれん"],
+        "こ": ["こしが痛い", "こわい"],
+        "さ": ["さむい", "さわって"],
+        "し": ["しんどい", "しびれる"],
+        "す": ["すこし待って", "すわりたい"],
+        "せ": ["せなかが痛い"],
+        "そ": ["そのままで"],
+        "た": ["たんを取って", "たすけて"],
+        "ち": ["ちかくにいて"],
+        "つ": ["つらい", "つめたい"],
+        "て": ["てが痛い", "テレビ"],
+        "と": ["トイレ", "とめて"],
+        "な": ["なんでもない"],
+        "に": ["にくたい", "にがい"],
+        "ぬ": ["ぬるい"],
+        "ね": ["ねむい", "ねつがある"],
+        "の": ["のどが渇いた"],
+        "は": ["はい", "はなして"],
+        "ひ": ["ひやして"],
+        "ふ": ["ふとんをかけて"],
+        "へ": ["へやがあつい"],
+        "ほ": ["ほんとうに"],
+        "ま": ["まくらを直して"],
+        "み": ["みず", "みぎ"],
+        "む": ["むねが苦しい"],
+        "め": ["めが痛い", "めがね"],
+        "も": ["もういいです"],
+        "や": ["やすみたい"],
+        "ゆ": ["ゆっくり"],
+        "よ": ["よんでほしい"],
+        "ら": ["らくになりたい"],
+        "り": ["りょうかい"],
+        "る": ["るすばん"],
+        "れ": ["れんらく"],
+        "ろ": ["ろうか"],
+        "わ": ["わかりました"]
+      };
+
+      if (DICT[last2]) DICT[last2].forEach(w => candidates.add(w));
+      if (DICT[last1]) DICT[last1].forEach(w => candidates.add(w));
+
+      return Array.from(candidates);
+    }
+
+    // Google日本語入力 CGI API の呼び出し
+    function fetchGoogleIME(query) {
+      if (!query || query.length === 0) return;
+      const cbName = "googleImeCb_" + (++jsonpCounter);
+      
+      const script = document.createElement("script");
+      script.id = cbName;
+      script.src = `https://www.google.com/transliterate?langpair=ja-Hira|ja&text=${encodeURIComponent(query)}&jsonp=${cbName}`;
+
+      window[cbName] = (data) => {
+        try {
+          if (query === lastQueryText && Array.isArray(data)) {
+            const googleResults = [];
+            data.forEach(segment => {
+              if (segment && segment[1] && Array.isArray(segment[1])) {
+                segment[1].forEach(cand => googleResults.push(cand));
+              }
+            });
+
+            if (googleResults.length > 0) {
+              // Googleの変換結果を最優先に統合
+              const merged = Array.from(new Set([...googleResults, ...getLocalCandidates(query, textBox.textContent)]));
+              renderSuggestButtons(merged, query);
+            }
+          }
+        } finally {
+          delete window[cbName];
+          script.remove();
+        }
+      };
+
+      script.onerror = () => {
+        delete window[cbName];
+        script.remove();
+      };
+
+      document.body.appendChild(script);
+    }
+
+    // 候補ボタンの描画
+    function renderSuggestButtons(list, query) {
+      suggestList.innerHTML = "";
+      if (!list || !list.length) {
+        refreshNavElements();
+        return;
+      }
+
+      list.slice(0, 8).forEach(word => {
+        const btn = document.createElement("button");
+        btn.className = "btn-suggest";
+        btn.textContent = word;
+        btn.addEventListener("click", () => {
+          playBeep(1000, 0.07, "triangle");
+          // 入力中の末尾クエリ部分を決定した漢字・語句に置換
+          const full = textBox.textContent;
+          if (full.endsWith(query)) {
+            textBox.textContent = full.slice(0, full.length - query.length) + word;
+          } else {
+            textBox.textContent += word;
+          }
+          speakText(textBox.textContent);
+          updateSuggestions();
+        });
+        suggestList.appendChild(btn);
+      });
+
+      refreshNavElements();
+    }
+    /* ==========================================================================
+       5. 音声読み上げ (Google Cloud Neural2-D ＋ Cloudflare Workers)
+       ========================================================================== */
+    const CLOUD_TTS_ENDPOINT = "https://tv-speech-api.ryota-nemottuan.workers.dev/?voice=ja-JP-Neural2-D&text=";
+    let ttsAudio = new Audio();
+
+    function speakText(text) {
+      if (!text || !text.trim()) return;
+      playBeep(1200, 0.08, "sine");
+
+      if (typeof saveHistorySentence === "function") {
+        saveHistorySentence(text);
+      }
+
+      if (ttsStatus) ttsStatus.textContent = "読み上げ中...";
+
+      try {
+        const url = CLOUD_TTS_ENDPOINT + encodeURIComponent(text.trim());
+        ttsAudio.src = url;
+        ttsAudio.play().then(() => {
+          ttsAudio.onended = () => {
+            if (ttsStatus) ttsStatus.textContent = "待機中";
+          };
+        }).catch(err => {
+          fallbackLocalTTS(text);
+        });
+      } catch(e) {
+        fallbackLocalTTS(text);
+      }
+    }
+
+    function fallbackLocalTTS(text) {
+      if ('speechSynthesis' in window) {
+        window.speechSynthesis.cancel();
+        const utter = new SpeechSynthesisUtterance(text);
+        utter.lang = 'ja-JP';
+        utter.onend = () => { if (ttsStatus) ttsStatus.textContent = "待機中"; };
+        utter.onerror = () => { if (ttsStatus) ttsStatus.textContent = "待機中"; };
+        window.speechSynthesis.speak(utter);
+      } else {
+        if (ttsStatus) ttsStatus.textContent = "待機中";
+      }
+    }
+
+    function requestFullScreenOnce() {
+      if (!document.fullscreenElement) {
+        document.documentElement.requestFullscreen().catch(() => {});
+      }
+      if ('wakeLock' in navigator) {
+        navigator.wakeLock.request('screen').catch(() => {});
+      }
+    }
+
+    // 1フレームの無音微小MP4 (Base64) をループ再生してFire OSのスリープを抑制
+    function initWakeLockVideo() {
+      const v = document.getElementById("wakeLockVideo");
+      // 超軽量な無音H.264動画データURI
+      v.src = "data:video/mp4;base64,AAAAHGZ0eXBtcDQyAAAAAG1wNDJpc29tYXZjMQAAADd2bW92AAAAbG12aGQAAAAA1g/lWNYP5VgAAAPoAAAA+gABAAABAAAAAAAAAAAAAAAAAAAAAAAAAAABAAAAAAAAAAAAAAAAAAAAAQAAAAAAAAAAAAAAAAAAQAAABW1kYXQ=";
+      v.play().catch(() => {});
+    }
+
+    /* ==========================================================================
+       7. リモコン操作イベント（D-Pad & キーボード完全捕捉）
+       ========================================================================== */
+    window.addEventListener("keydown", (e) => {
+      initAudio();
+      requestFullScreenOnce();
+
+      switch(e.key) {
+        case "ArrowUp":
+        case "Up":
+          e.preventDefault();
+          moveFocus("up");
+          break;
+        case "ArrowDown":
+        case "Down":
+          e.preventDefault();
+          moveFocus("down");
+          break;
+        case "ArrowLeft":
+        case "Left":
+          e.preventDefault();
+          moveFocus("left");
+          break;
+        case "ArrowRight":
+        case "Right":
+          e.preventDefault();
+          moveFocus("right");
+          break;
+        case "Enter":
+        case "Select":
+          e.preventDefault();
+          if (allButtons[currentFocusIndex]) {
+            allButtons[currentFocusIndex].click();
+          }
+          break;
+        case "Backspace":
+        case "BrowserBack":
+        case "Escape":
+          e.preventDefault();
+          backspace();
+          break;
+      }
+    });
+
+    /* ==========================================================================
+       7-B. Gamepad API による Fire TV リモコンの低レイヤ入力直接ポーリング
+       （Silkブラウザの丸いマウスカーソルを完全に無視してマス目を動かすハック）
+       ========================================================================== */
+    let lastButtonStates = {};
+    let lastAxesTime = 0;
+
+    function pollGamepad() {
+      const gamepads = navigator.getGamepads ? navigator.getGamepads() : [];
+      for (let i = 0; i < gamepads.length; i++) {
+        const gp = gamepads[i];
+        if (!gp) continue;
+
+        const now = Date.now();
+
+        // 1. 十字キー (Standard Gamepad Mapping: 12=上, 13=下, 14=左, 15=右, 0=決定/Enter, 1=戻る)
+        const checkBtn = (index, action) => {
+          const pressed = gp.buttons[index] && gp.buttons[index].pressed;
+          const key = `${gp.index}_${index}`;
+          if (pressed && !lastButtonStates[key]) {
+            action();
+          }
+          lastButtonStates[key] = pressed;
+        };
+
+        checkBtn(12, () => moveFocus("up"));
+        checkBtn(13, () => moveFocus("down"));
+        checkBtn(14, () => moveFocus("left"));
+        checkBtn(15, () => moveFocus("right"));
+        checkBtn(0, () => {
+          if (allButtons[currentFocusIndex]) allButtons[currentFocusIndex].click();
+        });
+        checkBtn(1, () => backspace());
+
+        // 2. スティックのアナログ入力（倒した方向）
+        if (gp.axes && gp.axes.length >= 2 && now - lastAxesTime > 220) {
+          const x = gp.axes[0];
+          const y = gp.axes[1];
+          if (y < -0.55) {
+            moveFocus("up");
+            lastAxesTime = now;
+          } else if (y > 0.55) {
+            moveFocus("down");
+            lastAxesTime = now;
+          } else if (x < -0.55) {
+            moveFocus("left");
+            lastAxesTime = now;
+          } else if (x > 0.55) {
+            moveFocus("right");
+            lastAxesTime = now;
+          }
+        }
+      }
+      requestAnimationFrame(pollGamepad);
+    }
+    requestAnimationFrame(pollGamepad);
+
+    /* ==========================================================================
+       8. 初期化処理
+       ========================================================================== */
+    window.addEventListener("DOMContentLoaded", () => {
+      createKeyGrid();
+
+      // ヘッダー操作ボタンの登録
+      document.getElementById("btnSpeak").addEventListener("click", () => {
+        speakText(textBox.textContent);
+      });
+      document.getElementById("btnBack").addEventListener("click", backspace);
+      document.getElementById("btnClear").addEventListener("click", clearText);
+
+      // 左側定型文ボタンの登録
+      document.querySelectorAll(".btn-phrase").forEach(btn => {
+        btn.addEventListener("click", () => {
+          const phrase = btn.getAttribute("data-text");
+          textBox.textContent = phrase;
+          speakText(phrase);
+        });
+      });
+
+      refreshNavElements();
+
+      // 初期フォーカスを「あ」（50音グリッドの先頭）に設定
+      const aKey = Array.from(document.querySelectorAll(".btn-key")).find(b => b.textContent === "あ");
+      if (aKey) {
+        currentFocusIndex = allButtons.indexOf(aKey);
+        updateFocusVisual();
+      }
+
+      initWakeLockVideo();
+      ttsStatus.textContent = "準備完了（リモコン操作可能）";
+
+      // ページ全体のどこかをクリックしたら即座に現在のマスにフォーカスを戻す
+      window.addEventListener("pointerdown", () => {
+        if (allButtons[currentFocusIndex]) {
+          allButtons[currentFocusIndex].focus({ preventScroll: true });
+        }
+      });
+    });
+  </script>
+</body>
+</html>

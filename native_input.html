@@ -1,0 +1,588 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>テレビ用 デジタル文字盤 (OSキーボード連携版)</title>
+  <style>
+    :root {
+      --bg-color: #0e1015;
+      --card-bg: #1a1e27;
+      --card-border: #2c3344;
+      --text-color: #f0f3f8;
+      --accent-color: #ffe600;
+      --accent-text: #000000;
+      --action-speak: #00e676;
+      --action-clear: #ff5252;
+      --history-bg: rgba(0, 176, 255, 0.12);
+      --history-border: rgba(0, 176, 255, 0.35);
+      --history-color: #e1f5fe;
+      --suggest-badge: #ffd54f;
+      --focus-glow: 0 0 24px rgba(255, 230, 0, 0.9), 0 0 8px #ffe600;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background-color: var(--bg-color);
+      color: var(--text-color);
+      font-family: "Hiragino Kaku Gothic ProN", "Meiryo", "BIZ UDPGothic", sans-serif;
+      width: 100vw;
+      height: 100vh;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      padding: 2.5vh 3.5vw; /* オーバースキャン防止セーフエリア */
+      gap: 1.8vh;
+    }
+
+    /* 共通ボタン & 入力枠スタイル */
+    input, button {
+      font-family: inherit;
+      font-weight: 700;
+      border-radius: 14px;
+      outline: none;
+      transition: transform 0.08s ease, background-color 0.08s ease, box-shadow 0.08s ease, border-color 0.08s ease;
+    }
+
+    /* 高コントラスト・フォーカス表示（枠拡大による描画切れを防ぐためtransform拡大をやめ、太枠＋内側発光シャドウで超強調） */
+    input:focus,
+    button:focus,
+    button.focused {
+      background: var(--accent-color) !important;
+      color: var(--accent-text) !important;
+      border: 4px solid #ffffff !important;
+      box-shadow: 0 0 0 3px #000000, 0 0 16px rgba(255, 230, 0, 0.9) !important;
+      z-index: 10;
+    }
+
+    /* 上部：入力フォーム ＆ 発話・クリアアクション */
+    header {
+      display: flex;
+      flex-direction: column;
+      gap: 1.2vh;
+      flex-shrink: 0;
+    }
+
+    .input-row {
+      display: flex;
+      gap: 1.2vw;
+      align-items: stretch;
+      min-height: 10.5vh;
+    }
+
+    /* Fire TV標準キーボードを呼び出す特大インプット枠 */
+    #mainInput {
+      flex: 1;
+      background: var(--card-bg);
+      border: 3.5px solid var(--card-border);
+      color: #ffffff;
+      font-size: clamp(24px, 4vh, 46px);
+      padding: 0 1.6vw;
+      letter-spacing: 0.06em;
+    }
+
+    #mainInput::placeholder {
+      color: #5c667a;
+      font-size: clamp(18px, 2.6vh, 30px);
+      font-weight: 400;
+    }
+
+    .btn-action {
+      padding: 0 2.2vw;
+      border: 3.5px solid;
+      font-size: clamp(20px, 3vh, 34px);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      white-space: nowrap;
+    }
+
+    .btn-speak {
+      background: rgba(0, 230, 118, 0.15);
+      border-color: var(--action-speak);
+      color: #b9f6ca;
+    }
+    .btn-speak:focus,
+    .btn-speak.focused {
+      background: #00e676 !important;
+      color: #000 !important;
+      border: 4px solid #ffffff !important;
+      box-shadow: 0 0 0 3px #000000, 0 0 16px rgba(0, 230, 118, 0.9) !important;
+    }
+
+    .btn-clear {
+      background: rgba(255, 82, 82, 0.15);
+      border-color: var(--action-clear);
+      color: #ff8a80;
+    }
+
+    /* メイン：会話・発話履歴リストエリア */
+    main {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      min-height: 0; /* flex overflow防止 */
+      background: var(--card-bg);
+      border: 3px solid var(--card-border);
+      border-radius: 18px;
+      padding: 1.6vh 1.6vw;
+    }
+
+    /* 3列×3行＝画面に9個並ぶ無限スクロールグリッド（スクロールバー完全非表示） */
+    .history-scroll-area {
+      flex: 1;
+      overflow-y: scroll;
+      scrollbar-width: none; /* Firefox */
+      -ms-overflow-style: none; /* IE/Edge */
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      grid-auto-rows: calc((100% - 2.8vh) / 3); /* 3行固定で画面ぴったりに収まる */
+      gap: 1.4vh 1.4vw;
+      padding: 0.4vh 0.4vw; /* フォーカス発光が切れないための余白 */
+      min-height: 0;
+    }
+
+    /* Chrome / Silk用 スクロールバー非表示 */
+    .history-scroll-area::-webkit-scrollbar {
+      display: none;
+      width: 0;
+      height: 0;
+    }
+
+    .btn-history {
+      background: var(--history-bg);
+      border: 3px solid var(--history-border);
+      color: var(--history-color);
+      font-size: clamp(16px, 2.3vh, 26px);
+      padding: 1vh 1.2vw;
+      text-align: left;
+      justify-content: flex-start;
+      align-items: center;
+      display: flex;
+      cursor: pointer;
+      line-height: 1.35;
+      word-break: break-all;
+    }
+
+    /* サジェスト（検索一致）カードの強調表示 */
+    .btn-history.is-suggest {
+      background: rgba(255, 213, 79, 0.12);
+      border-color: rgba(255, 213, 79, 0.5);
+      color: #fff9c4;
+    }
+
+    .empty-msg {
+      grid-column: 1 / -1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #5c667a;
+      font-size: clamp(16px, 2.6vh, 28px);
+      height: 100%;
+    }
+
+    /* スリープ防止用の隠し動画 */
+    #wakeLockVideo {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      opacity: 0.01;
+      pointer-events: none;
+    }
+  </style>
+</head>
+<body>
+
+  <video id="wakeLockVideo" muted loop playsinline autoplay></video>
+
+  <!-- 上部：Fire TV標準キーボードを開く入力枠 ＆ アクション -->
+  <header>
+    <div class="input-row">
+      <input type="text" id="mainInput" placeholder="決定ボタンでテレビの入力画面が開きます" autocomplete="off">
+      <button id="btnSpeak" class="btn-action btn-speak" tabindex="0">はなす</button>
+      <button id="btnClear" class="btn-action btn-clear" tabindex="0">クリア</button>
+    </div>
+  </header>
+
+  <!-- メイン：過去の履歴＆検索サジェスト一覧（3列×3行＝9個表示） -->
+  <main>
+    <!-- 無限スクロール可能な9個（3×3）グリッド -->
+    <div class="history-scroll-area" id="historyList"></div>
+  </main>
+
+  <script>
+    /* ==========================================================================
+       1. Web Audio API クリック音
+       ========================================================================== */
+    let audioCtx = null;
+    function initAudio() {
+      if (!audioCtx) {
+        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      }
+      if (audioCtx.state === 'suspended') {
+        audioCtx.resume();
+      }
+    }
+
+    function playBeep(freq = 600, duration = 0.04, type = "sine") {
+      try {
+        initAudio();
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = type;
+        osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+        gain.gain.setValueAtTime(0.12, audioCtx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + duration);
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.start();
+        osc.stop(audioCtx.currentTime + duration);
+      } catch(e) {}
+    }
+
+    /* ==========================================================================
+       2. 履歴管理 (localStorage) ＆ 初期プリセット
+       ========================================================================== */
+    const STORAGE_KEY = "tv_native_kb_history";
+
+    const DEFAULT_PRESETS = [
+      "はい。",
+      "いいえ。",
+      "ありがとうございます。",
+      "ありがとうございました。",
+      "ありがたいです。",
+      "痛いです。",
+      "たんを吸引してください。",
+      "体位を変えてください。",
+      "お水を飲みたいです。",
+      "少し待ってください。",
+      "テレビをつけてください。",
+      "トイレに行きたいです。",
+      "寒いです。",
+      "暑いです。",
+      "窓を開けてください。",
+      "背中がかゆいです。",
+      "頭の位置を上げてください。",
+      "もう大丈夫です。"
+    ];
+
+    function getHistory() {
+      try {
+        const raw = localStorage.getItem(STORAGE_KEY);
+        if (!raw) {
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(DEFAULT_PRESETS));
+          return DEFAULT_PRESETS;
+        }
+        return JSON.parse(raw);
+      } catch (e) {
+        return DEFAULT_PRESETS;
+      }
+    }
+
+    function saveHistory(text) {
+      if (!text || !text.trim()) return;
+      text = text.trim();
+      let list = getHistory();
+      list = list.filter(item => item !== text);
+      list.unshift(text); // 先頭に追加
+      if (list.length > 500) list = list.slice(0, 500);
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(list));
+      } catch (e) {}
+    }
+
+    /* ==========================================================================
+       3. 音声読み上げ (Google Cloud Neural2 公式TTS ＋ Cloudflare Workers)
+       ========================================================================== */
+    const CLOUD_TTS_ENDPOINT = "https://tv-speech-api.ryota-nemottuan.workers.dev/?voice=ja-JP-Neural2-D&text=";
+    let ttsAudio = new Audio();
+
+    function speakText(text) {
+      if (!text || !text.trim()) return;
+      playBeep(1200, 0.08, "sine");
+
+      saveHistory(text);
+
+      // Cloudflare経由でGoogle Cloud Text-to-Speech (Neural2) を最優先再生！
+      try {
+        const url = CLOUD_TTS_ENDPOINT + encodeURIComponent(text.trim());
+        ttsAudio.src = url;
+        ttsAudio.play().catch(err => {
+          // 万が一オフライン時はローカルTTSへフォールバック
+          fallbackLocalTTS(text);
+        });
+      } catch(e) {
+        fallbackLocalTTS(text);
+      }
+    }
+
+    function fallbackLocalTTS(text) {
+      if ('speechSynthesis' in window) {
+        window.speechSynthesis.cancel();
+        const utter = new SpeechSynthesisUtterance(text);
+        utter.lang = 'ja-JP';
+        window.speechSynthesis.speak(utter);
+      }
+    }
+
+    /* ==========================================================================
+       4. 全画面化 ＆ スリープ対策
+       ========================================================================== */
+    function requestFullScreenOnce() {
+      if (!document.fullscreenElement) {
+        document.documentElement.requestFullscreen().catch(() => {});
+      }
+      if ('wakeLock' in navigator) {
+        navigator.wakeLock.request('screen').catch(() => {});
+      }
+    }
+
+    /* ==========================================================================
+       5. サジェスト自動検索 ＆ 9個無限スクロール描画
+       ========================================================================== */
+    const mainInput = document.getElementById("mainInput");
+    const btnSpeak = document.getElementById("btnSpeak");
+    const btnClear = document.getElementById("btnClear");
+    const historyList = document.getElementById("historyList");
+
+    let allNavElements = [];
+    let currentFocusIndex = 0;
+
+    function renderList() {
+      historyList.innerHTML = "";
+      const fullList = getHistory();
+      const query = mainInput.value.trim().toLowerCase();
+
+      let displayList = [];
+      const isSearchMode = (query.length > 0);
+
+      if (isSearchMode) {
+        const starts = fullList.filter(s => s.toLowerCase().startsWith(query));
+        const contains = fullList.filter(s => !s.toLowerCase().startsWith(query) && s.toLowerCase().includes(query));
+        displayList = [...starts, ...contains];
+      } else {
+        displayList = fullList;
+      }
+
+      if (!displayList.length) {
+        historyList.innerHTML = '<div class="empty-msg">一致する言葉がありません</div>';
+        refreshNavElements();
+        return;
+      }
+
+      displayList.forEach(text => {
+        const btn = document.createElement("button");
+        btn.className = "btn-history" + (isSearchMode ? " is-suggest" : "");
+        btn.textContent = text;
+        btn.tabIndex = 0;
+        btn.addEventListener("click", () => {
+          playBeep(900, 0.06, "triangle");
+
+          // サジェストが選ばれたら：即時発話 ＆ 入力欄をクリアして通常の最新履歴一覧へ戻す！
+          speakText(text);
+          mainInput.value = "";
+          renderList();
+        });
+        historyList.appendChild(btn);
+      });
+
+      refreshNavElements();
+    }
+
+    function refreshNavElements() {
+      const prevElement = allNavElements[currentFocusIndex];
+
+      allNavElements = [
+        mainInput,
+        btnSpeak,
+        btnClear,
+        ...Array.from(document.querySelectorAll(".btn-history"))
+      ];
+
+      if (prevElement && allNavElements.includes(prevElement)) {
+        currentFocusIndex = allNavElements.indexOf(prevElement);
+      } else if (currentFocusIndex >= allNavElements.length) {
+        currentFocusIndex = 0;
+      }
+      updateFocusVisual();
+    }
+
+    function updateFocusVisual() {
+      allNavElements.forEach((el, idx) => {
+        if (idx === currentFocusIndex) {
+          el.classList.add("focused");
+          el.focus({ preventScroll: true });
+          // 上下左右にスクロールが必要な場合は自動追従
+          el.scrollIntoView({ block: "nearest", inline: "nearest" });
+        } else {
+          el.classList.remove("focused");
+        }
+      });
+    }
+
+    /* ==========================================================================
+       6. 十字キーによる確定的2Dグリッド移動ロジック
+       ========================================================================== */
+    function moveFocus(direction) {
+      if (!allNavElements.length) return;
+      const historyButtons = Array.from(document.querySelectorAll(".btn-history"));
+      const isTopRow = (currentFocusIndex < 3); // 0: mainInput, 1: btnSpeak, 2: btnClear
+
+      // ----------------------------------------------------
+      // A. 上段（ヘッダー行：入力欄、はなす、クリア）にいる時の移動
+      // ----------------------------------------------------
+      if (isTopRow) {
+        if (direction === "left") {
+          if (currentFocusIndex > 0) currentFocusIndex--;
+        } else if (direction === "right") {
+          if (currentFocusIndex < 2) currentFocusIndex++;
+        } else if (direction === "down") {
+          // 下を押した時は、対応する下の列に着地（入力欄->1列目, はなす->2列目, クリア->3列目）
+          if (historyButtons.length > 0) {
+            const targetCol = Math.min(currentFocusIndex, historyButtons.length - 1);
+            currentFocusIndex = 3 + targetCol;
+          }
+        }
+        playBeep(480, 0.03, "sine");
+        updateFocusVisual();
+        return;
+      }
+
+      // ----------------------------------------------------
+      // B. 下段（3列固定の履歴グリッド）にいる時の移動
+      // ----------------------------------------------------
+      const historyIndex = currentFocusIndex - 3;
+      const totalHistory = historyButtons.length;
+      const col = historyIndex % 3; // 0:左列, 1:中央列, 2:右列
+      const row = Math.floor(historyIndex / 3);
+
+      if (direction === "left") {
+        if (col > 0) {
+          // 同じ行の左のマスへ移動
+          currentFocusIndex--;
+        }
+      } else if (direction === "right") {
+        if (col < 2 && (historyIndex + 1) < totalHistory) {
+          // 同じ行の右のマスへ移動
+          currentFocusIndex++;
+        }
+      } else if (direction === "up") {
+        if (row === 0) {
+          // 1行目にいる時は、真上のヘッダー要素へ移動！
+          // 左列(col 0) -> mainInput(0), 中央列(col 1) -> btnSpeak(1), 右列(col 2) -> btnClear(2)
+          currentFocusIndex = col;
+        } else {
+          // 上の行へ
+          currentFocusIndex -= 3;
+        }
+      } else if (direction === "down") {
+        if (historyIndex + 3 < totalHistory) {
+          // 下の行へ（無限スクロール）
+          currentFocusIndex += 3;
+        }
+      }
+
+      playBeep(480, 0.03, "sine");
+      updateFocusVisual();
+    }
+
+    /* ==========================================================================
+       6. イベントリスナー（キーボード＆リモコン）
+       ========================================================================== */
+    window.addEventListener("keydown", (e) => {
+      initAudio();
+      requestFullScreenOnce();
+
+      // インプット欄にフォーカスがあり、OSキーボードで文字入力中は十字キーをブラウザに任せる
+      if (document.activeElement === mainInput && e.key !== "ArrowDown" && e.key !== "Enter") {
+        return;
+      }
+
+      switch(e.key) {
+        case "ArrowUp":
+        case "Up":
+          e.preventDefault();
+          moveFocus("up");
+          break;
+        case "ArrowDown":
+        case "Down":
+          e.preventDefault();
+          moveFocus("down");
+          break;
+        case "ArrowLeft":
+        case "Left":
+          e.preventDefault();
+          moveFocus("left");
+          break;
+        case "ArrowRight":
+        case "Right":
+          e.preventDefault();
+          moveFocus("right");
+          break;
+        case "Enter":
+        case "Select":
+          if (document.activeElement === mainInput) {
+            // そのままOS標準キーボードを開く
+          } else {
+            e.preventDefault();
+            if (allNavElements[currentFocusIndex]) {
+              allNavElements[currentFocusIndex].click();
+            }
+          }
+          break;
+      }
+    });
+
+    // 入力欄の内容が変わるたびにリアルタイム自動検索
+    mainInput.addEventListener("input", () => {
+      renderList();
+    });
+
+    // Fire TVのOSキーボード確定時（changeイベント）
+    mainInput.addEventListener("change", () => {
+      renderList();
+      // 入力確定直後、もしサジェストが1件以上あれば、すぐ下のサジェスト先頭にフォーカスを当てる！
+      const firstHistory = document.querySelector(".btn-history");
+      if (firstHistory && allNavElements.includes(firstHistory)) {
+        currentFocusIndex = allNavElements.indexOf(firstHistory);
+        updateFocusVisual();
+      }
+    });
+
+    // 「はなす」ボタン
+    btnSpeak.addEventListener("click", () => {
+      if (mainInput.value.trim()) {
+        speakText(mainInput.value.trim());
+        mainInput.value = "";
+        renderList();
+      }
+    });
+
+    // 「クリア」ボタン
+    btnClear.addEventListener("click", () => {
+      playBeep(300, 0.06, "sawtooth");
+      mainInput.value = "";
+      renderList();
+    });
+
+    /* ==========================================================================
+       7. 初期化
+       ========================================================================== */
+    window.addEventListener("DOMContentLoaded", () => {
+      renderList();
+      currentFocusIndex = 0;
+      updateFocusVisual();
+
+      const v = document.getElementById("wakeLockVideo");
+      v.src = "data:video/mp4;base64,AAAAHGZ0eXBtcDQyAAAAAG1wNDJpc29tYXZjMQAAADd2bW92AAAAbG12aGQAAAAA1g/lWNYP5VgAAAPoAAAA+gABAAABAAAAAAAAAAAAAAAAAAAAAAAAAAABAAAAAAAAAAAAAAAAAAAAAQAAAAAAAAAAAAAAAAAAQAAABW1kYXQ=";
+      v.play().catch(() => {});
+    });
+  </script>
+</body>
+</html>
