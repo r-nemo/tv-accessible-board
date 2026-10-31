@@ -37,8 +37,7 @@
 tv-communication-board/
 ├── index.html          # バージョン1（50音マトリクス文字盤）
 ├── v1.html             # バージョン1（別名リンク用）
-├── native_input.html   # バージョン2（OSキーボード連携版）
-├── start_server.bat    # ローカル検証用Pythonサーバー起動バッチ
+├── v2.html             # バージョン2（OSキーボード連携版）
 ├── worker/
 │   └── index.js        # Cloudflare Workers 中継スクリプト（TTS連携）
 └── README.md
@@ -48,11 +47,8 @@ tv-communication-board/
 
 ## 利用方法
 
-### ローカル実行
-1. `start_server.bat` をダブルクリックしてローカルサーバー（ポート8000）を起動します。
-2. 同一Wi-Fi環境下のFire TV（Silkブラウザ等）から、PCのローカルIP宛にアクセスします。
-   * バージョン1: `http://<PC-IP>:8000/`
-   * バージョン2: `http://<PC-IP>:8000/native_input.html`
+### GitHub Pages による常時ホスティング
+GitHub Pages が有効化されると、Fire TVのSilkブラウザから以下のURLで常時利用可能になります：
+* **バージョン1（50音表文字盤）**: `https://<username>.github.io/<repo>/`（または `/v1.html`）
+* **バージョン2（キーボード連携版）**: `https://<username>.github.io/<repo>/v2.html`
 
-### 完全PCレス運用（Cloudflare Pages等への配置）
-* 本リポジトリの静的ファイル（`index.html`, `native_input.html` 等）を Cloudflare Pages や GitHub Pages に配置することで、PCを起動することなくテレビ単体（常時スタンバイ）で利用可能になります。
