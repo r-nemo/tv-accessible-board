@@ -59,6 +59,11 @@
       border-radius: 14px;
       padding: 0.8vh 1.4vw;
       min-height: 10vh;
+      transition: border-color 0.15s ease, box-shadow 0.15s ease;
+    }
+    .display-row.speaking {
+      border-color: #00e676;
+      box-shadow: 0 0 22px rgba(0, 230, 118, 0.55);
     }
 
     .text-box {
@@ -70,8 +75,13 @@
       display: flex;
       align-items: center;
       overflow-x: auto;
+      scrollbar-width: none;
+      -ms-overflow-style: none;
       white-space: nowrap;
       letter-spacing: 0.08em;
+    }
+    .text-box::-webkit-scrollbar {
+      display: none;
     }
 
     .text-box:empty::before {
@@ -84,32 +94,6 @@
     .header-actions {
       display: flex;
       gap: 0.8vw;
-    }
-
-    /* 予測変換サジェスト枠 */
-    .suggest-row {
-      display: flex;
-      align-items: center;
-      gap: 0.8vw;
-      min-height: 6vh;
-    }
-
-    .suggest-label {
-      font-size: clamp(14px, 2vh, 22px);
-      color: #ffd54f;
-      font-weight: bold;
-      white-space: nowrap;
-    }
-
-    .suggest-list {
-      display: flex;
-      gap: 0.8vw;
-      flex: 1;
-      overflow-x: auto;
-    }
-
-    .suggest-list::-webkit-scrollbar {
-      display: none;
     }
 
     /* メインレイアウト（左：定型文、右：50音盤） */
@@ -143,22 +127,44 @@
     button.focused {
       background: var(--accent-color) !important;
       color: var(--accent-text) !important;
-      border-color: #ffffff !important;
-      transform: scale(1.08);
-      box-shadow: var(--focus-glow);
+      border: 4px solid #ffffff !important;
+      transform: none !important;
+      box-shadow: 0 0 0 3px #000000, 0 0 18px rgba(255, 230, 0, 0.9) !important;
       z-index: 10;
     }
 
     /* ヘッダー操作ボタン */
     .btn-action {
-      padding: 0 1.6vw;
+      min-width: 7.5vh;
+      padding: 0 1.4vw;
       height: 7.5vh;
-      font-size: clamp(18px, 2.6vh, 30px);
+      font-size: clamp(22px, 3.4vh, 38px);
     }
     .btn-speak {
       background: rgba(0, 230, 118, 0.15);
       border-color: var(--action-speak);
       color: #b9f6ca;
+    }
+    .btn-pin {
+      background: rgba(255, 213, 79, 0.15);
+      border-color: #ffd54f;
+      color: #ffe082;
+    }
+    .btn-pin:focus,
+    .btn-pin.focused {
+      background: #ffd54f !important;
+      color: #000 !important;
+    }
+    .btn-pin.is-unpin {
+      background: rgba(224, 64, 251, 0.15);
+      border-color: #e040fb;
+      color: #ea80fc;
+      font-size: clamp(16px, 2.4vh, 28px);
+    }
+    .btn-pin.is-unpin:focus,
+    .btn-pin.is-unpin.focused {
+      background: #e040fb !important;
+      color: #000 !important;
     }
     .btn-speak:focus,
     .btn-speak.focused {
@@ -170,50 +176,179 @@
       border-color: var(--action-delete);
       color: #ff8a80;
     }
+    .btn-backspace:focus,
+    .btn-backspace.focused {
+      background: #ff5252 !important;
+      color: #000 !important;
+    }
     .btn-clear {
       background: rgba(255, 145, 0, 0.15);
       border-color: var(--action-clear);
       color: #ffd180;
     }
-
-    /* サジェストボタン */
-    .btn-suggest {
-      padding: 0 1.2vw;
-      height: 5.2vh;
-      font-size: clamp(14px, 2.2vh, 24px);
-      background: #142233;
-      border-color: #254060;
+    .btn-clear:focus,
+    .btn-clear.focused {
+      background: #ff9100 !important;
+      color: #000 !important;
+    }
+    .btn-settings {
+      background: rgba(0, 176, 255, 0.15);
+      border-color: #00b0ff;
       color: #80d8ff;
-      white-space: nowrap;
+    }
+    .btn-settings:focus,
+    .btn-settings.focused {
+      background: #00b0ff !important;
+      color: #000 !important;
     }
 
-    /* 左側：定型文パネル */
-    .phrase-panel {
+    /* 設定オーバーレイモーダル */
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.78);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+    }
+    .modal-overlay.open {
+      display: flex;
+    }
+    .modal-card {
+      background: #141821;
+      border: 4px solid #3d4860;
+      border-radius: 20px;
+      padding: 2.2vh 3vw;
+      width: min(760px, 88vw);
+      max-height: 92vh;
+      overflow-y: auto;
       display: flex;
       flex-direction: column;
       gap: 1.2vh;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.85);
+    }
+    .modal-title {
+      font-size: clamp(20px, 2.8vh, 30px);
+      font-weight: 700;
+      color: #ffffff;
+      text-align: center;
+      margin-bottom: 0.3vh;
+    }
+    .setting-row {
+      display: flex;
+      align-items: center;
+      gap: 1vw;
+    }
+    .setting-btn {
+      flex: 1;
+      min-height: 6.2vh;
+      padding: 0 1.6vw;
+      font-size: clamp(16px, 2.3vh, 25px);
+      background: #1e2433;
+      border: 3px solid #354059;
+      color: #f0f3f8;
+      border-radius: 12px;
+      cursor: pointer;
+    }
+    .setting-val-display {
+      min-width: 140px;
+      text-align: center;
+      font-size: clamp(20px, 2.8vh, 30px);
+      font-weight: 700;
+      color: #ffe600;
+    }
+    .setting-btn-switch {
+      border-color: #00b0ff;
+      color: #80d8ff;
+      background: rgba(0, 176, 255, 0.12);
+    }
+    .setting-btn-switch:focus,
+    .setting-btn-switch.focused {
+      background: #00b0ff !important;
+      color: #000 !important;
+    }
+    .setting-btn-close {
+      border-color: #ff5252;
+      color: #ff8a80;
+      background: rgba(255, 82, 82, 0.12);
+      margin-top: 0.6vh;
+    }
+    .setting-btn-close:focus,
+    .setting-btn-close.focused {
+      background: #ff5252 !important;
+      color: #000 !important;
+    }
+
+    /* 左側：ピン ＆ 履歴パネル（スクロールバー非表示・下に無限移動） */
+    .phrase-panel {
+      display: flex;
+      flex-direction: column;
       height: 100%;
+      min-height: 0;
+    }
+    .left-scroll-area {
+      display: flex;
+      flex-direction: column;
+      gap: 1.4vh;
+      flex: 1;
+      min-height: 0;
+      overflow-y: scroll;
+      overflow-x: hidden;
+      scrollbar-width: none;
+      -ms-overflow-style: none;
+      padding: 4px 6px;
+    }
+    .left-scroll-area::-webkit-scrollbar {
+      display: none;
+    }
+    .left-section {
+      display: flex;
+      flex-direction: column;
+      gap: 0.8vh;
     }
     .panel-title {
       font-size: clamp(14px, 2vh, 22px);
       font-weight: bold;
       color: #00b0ff;
       padding-left: 0.3vw;
+      flex-shrink: 0;
+    }
+    .pin-title {
+      color: #ffd54f;
     }
     .phrase-grid {
-      display: grid;
-      grid-template-columns: 1fr;
-      grid-template-rows: repeat(7, 1fr);
-      gap: 1.2vh;
-      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 1.1vh;
+      padding: 4px 4px;
     }
     .btn-phrase {
+      width: 100%;
+      min-height: 8.2vh;
+      flex-shrink: 0;
       font-size: clamp(16px, 2.3vh, 26px);
       background: rgba(0, 176, 255, 0.12);
       border-color: rgba(0, 176, 255, 0.4);
       color: #e1f5fe;
-      justify-content: flex-start;
-      padding-left: 1.2vw;
+      display: block;
+      text-align: left;
+      line-height: 7.4vh;
+      padding: 0 1.2vw;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .btn-pin-item {
+      background: rgba(255, 213, 79, 0.12);
+      border-color: rgba(255, 213, 79, 0.5);
+      color: #fff8e1;
+    }
+    .history-empty {
+      color: #60687a;
+      font-size: clamp(14px, 2vh, 20px);
+      text-align: center;
+      padding: 4vh 1vw;
     }
 
     /* 右側：50音パネル */
@@ -264,34 +399,30 @@
     <div class="display-row">
       <div id="textBox" class="text-box"></div>
       <div class="header-actions">
-        <button id="btnSpeak" class="btn-action btn-speak" data-nav="0,0">🗣️ はなす</button>
-        <button id="btnBack" class="btn-action btn-backspace" data-nav="0,1">⌫ 1文字消す</button>
-        <button id="btnClear" class="btn-action btn-clear" data-nav="0,2">✕ ぜんぶ消す</button>
-      </div>
-    </div>
-
-    <!-- 予測変換候補エリア -->
-    <div class="suggest-row">
-      <span class="suggest-label">予測:</span>
-      <div id="suggestList" class="suggest-list">
-        <!-- 動的にサジェスト候補が挿入されます -->
+        <button id="btnPin" class="btn-action btn-pin" style="display:none;" disabled title="ピン止め">📌</button>
+        <button id="btnSpeak" class="btn-action btn-speak" data-nav="0,0" title="はなす">🗣️</button>
+        <button id="btnBack" class="btn-action btn-backspace" data-nav="0,1" title="1文字消す">⌫</button>
+        <button id="btnClear" class="btn-action btn-clear" data-nav="0,2" title="ぜんぶ消す">✕</button>
+        <button id="btnSettings" class="btn-action btn-settings" data-nav="0,3" title="設定">⚙️</button>
       </div>
     </div>
   </header>
 
   <!-- メイン：定型文 ＆ 50音表 -->
   <main>
-    <!-- 左側：頻出定型文パネル -->
+    <!-- 左側：ピン ＆ 履歴パネル -->
     <section class="phrase-panel">
-      <div class="panel-title">⚡ よくつかう言葉</div>
-      <div class="phrase-grid">
-        <button class="btn-phrase" data-text="はい。">はい</button>
-        <button class="btn-phrase" data-text="いいえ。">いいえ</button>
-        <button class="btn-phrase" data-text="痛いです。">痛いです</button>
-        <button class="btn-phrase" data-text="たんを吸引してください。">吸引して</button>
-        <button class="btn-phrase" data-text="体位を変えてください。">体位変換</button>
-        <button class="btn-phrase" data-text="お水を飲みたいです。">水がほしい</button>
-        <button class="btn-phrase" data-text="ありがとうございます。">ありがとう</button>
+      <div class="left-scroll-area">
+        <div id="pinSection" class="left-section" style="display:none;">
+          <div class="panel-title pin-title">📌 ピン</div>
+          <div class="phrase-grid" id="pinList"></div>
+        </div>
+        <div class="left-section">
+          <div class="panel-title">🕒 履歴</div>
+          <div class="phrase-grid" id="historyList">
+            <!-- JSから履歴ボタンが動的生成されます -->
+          </div>
+        </div>
       </div>
     </section>
 
@@ -303,6 +434,42 @@
     </section>
   </main>
 
+  <!-- 設定オーバーレイモーダル -->
+  <div id="settingsModal" class="modal-overlay" aria-hidden="true">
+    <div class="modal-card">
+      <div class="modal-title">⚙️ 設定</div>
+      <div class="setting-row">
+        <button id="btnModeSwitch" class="setting-btn setting-btn-switch">🔄 キーボード入力版 (v2) に切り替え</button>
+      </div>
+      <div class="setting-row">
+        <button id="btnVolDown" class="setting-btn">🔉 音量 −</button>
+        <div id="volDisplay" class="setting-val-display">100%</div>
+        <button id="btnVolUp" class="setting-btn">🔊 音量 ＋</button>
+      </div>
+      <div class="setting-row">
+        <button id="btnToggleBeep" class="setting-btn">🔔 操作音：ON</button>
+      </div>
+      <div class="setting-row">
+        <button id="btnToggleVoice" class="setting-btn">🗣️ 声の種類：男性</button>
+      </div>
+      <div class="setting-row">
+        <button id="btnToggleSpeed" class="setting-btn">⏱️ 話す速さ：ふつう</button>
+      </div>
+      <div class="setting-row">
+        <button id="btnToggleAutoClear" class="setting-btn">🧹 発話後に文字を消す：OFF</button>
+      </div>
+      <div class="setting-row">
+        <button id="btnToggleRecordHistory" class="setting-btn">📝 履歴の記録：ON</button>
+      </div>
+      <div class="setting-row">
+        <button id="btnClearAllHistory" class="setting-btn setting-btn-close" style="margin-top:0;">🗑️ 履歴を一括削除</button>
+      </div>
+      <div class="setting-row">
+        <button id="btnCloseSettings" class="setting-btn setting-btn-close">✕ とじる</button>
+      </div>
+    </div>
+  </div>
+
   <script>
     /* ==========================================================================
        1. 50音キーボード 定義データ（10列 × 5行）
@@ -311,37 +478,11 @@
     const KANA_GRID = [
       // 列0(あ) 列1(か) 列2(さ) 列3(た) 列4(な) 列5(は) 列6(ま) 列7(や) 列8(ら) 列9(わ)
       ["あ", "か", "さ", "た", "な", "は", "ま", "や", "ら", "わ"],
-      ["い", "き", "し", "ち", "に", "ひ", "み", "（", "り", "を"],
+      ["い", "き", "し", "ち", "に", "ひ", "み", "、", "り", "を"],
       ["う", "く", "す", "つ", "ぬ", "ふ", "む", "ゆ", "る", "ん"],
-      ["え", "け", "せ", "て", "ね", "へ", "め", "）", "れ", "ー"],
+      ["え", "け", "せ", "て", "ね", "へ", "め", "。", "れ", "ー"],
       ["お", "こ", "そ", "と", "の", "ほ", "も", "よ", "ろ", "゛゜小"] // 濁点・半濁点・小文字トグルキー
     ];
-
-    /* よく使われる予測変換辞書 */
-    const SUGGEST_DICTIONARY = {
-      "あ": ["ありがとう", "あたまが痛い", "あつい", "あしが痛い", "あさ"],
-      "い": ["いたい", "いいえ", "いつも", "いしゃ", "いっしょ"],
-      "う": ["うえを向きたい", "うごけない", "うでが痛い"],
-      "お": ["おねがい", "お水", "お茶", "お腹が痛い", "おわり"],
-      "か": ["からだが痛い", "かゆい", "かえてほしい", "かわいた"],
-      "き": ["きゅういん", "きもちわるい", "ききたい"],
-      "く": ["くびが痛い", "くすり", "くるしい", "くらい"],
-      "こ": ["こしが痛い", "これ", "こわい", "こえが出ない"],
-      "さ": ["さむい", "さわってほしい", "さようなら"],
-      "す": ["すこし待って", "すいぶん", "すわりたい"],
-      "た": ["たんを取って", "たいへん", "たすけて", "たべたい"],
-      "て": ["てがしびれる", "てをにぎって", "テレビを消して"],
-      "と": ["トイレ", "とめて", "となりにいて"],
-      "な": ["なんでもない", "なおして"],
-      "ね": ["ねむい", "ねむれない", "ねつがある"],
-      "の": ["のどが渇いた", "のみたい"],
-      "は": ["はい", "はなして", "はやい"],
-      "ひ": ["ひざが痛い", "ひやして"],
-      "み": ["みず", "みぎ", "みえない"],
-      "め": ["めが痛い", "めがね"],
-      "よ": ["よろしく", "よる", "よんでほしい"],
-      "わ": ["わかりました", "わからない"]
-    };
 
     /* 濁点・半濁点・小文字の変換マップ */
     const DAKUTEN_MAP = {
@@ -377,14 +518,155 @@
       }
     }
 
+    /* ==========================================================================
+       2-B. アプリ設定管理 (音量・操作音・声の種類・速度・自動消去)
+       ========================================================================== */
+    const SETTINGS_KEY = "tv_board_settings";
+    let appSettings = {
+      volume: 1.0,
+      speed: 1.0,
+      voice: "ja-JP-Neural2-D",
+      beep: true,
+      autoClear: false,
+      recordHistory: true
+    };
+    let isSettingsOpen = false;
+    let confirmClearPending = false;
+
+    function syncSettingsToUrl() {
+      try {
+        const params = new URLSearchParams(window.location.search);
+        params.set("vol", String(appSettings.volume));
+        params.set("speed", String(appSettings.speed));
+        params.set("voice", appSettings.voice === "ja-JP-Neural2-B" ? "B" : "D");
+        params.set("beep", appSettings.beep ? "1" : "0");
+        params.set("ac", appSettings.autoClear ? "1" : "0");
+        params.set("rh", appSettings.recordHistory ? "1" : "0");
+        const newUrl = window.location.pathname + "?" + params.toString();
+        window.history.replaceState(null, "", newUrl);
+      } catch (e) {}
+    }
+
+    function loadSettings() {
+      try {
+        const raw = localStorage.getItem(SETTINGS_KEY);
+        if (raw) {
+          appSettings = { ...appSettings, ...JSON.parse(raw) };
+        }
+      } catch (e) {}
+
+      // URLパラメータが指定されている場合は優先して反映（キャッシュ消去時の自動復元）
+      try {
+        const params = new URLSearchParams(window.location.search);
+        let hasUrlOverride = false;
+        if (params.has("vol")) {
+          const v = parseFloat(params.get("vol"));
+          if (!isNaN(v) && v >= 0.1 && v <= 3.0) { appSettings.volume = v; hasUrlOverride = true; }
+        }
+        if (params.has("speed")) {
+          const s = parseFloat(params.get("speed"));
+          if (!isNaN(s) && s >= 0.5 && s <= 2.0) { appSettings.speed = s; hasUrlOverride = true; }
+        }
+        if (params.has("voice")) {
+          const vc = params.get("voice");
+          appSettings.voice = (vc === "B" || vc === "ja-JP-Neural2-B") ? "ja-JP-Neural2-B" : "ja-JP-Neural2-D";
+          hasUrlOverride = true;
+        }
+        if (params.has("beep")) {
+          appSettings.beep = params.get("beep") !== "0";
+          hasUrlOverride = true;
+        }
+        if (params.has("ac")) {
+          appSettings.autoClear = params.get("ac") === "1";
+          hasUrlOverride = true;
+        }
+        if (params.has("rh")) {
+          appSettings.recordHistory = params.get("rh") !== "0";
+          hasUrlOverride = true;
+        }
+        if (hasUrlOverride) {
+          localStorage.setItem(SETTINGS_KEY, JSON.stringify(appSettings));
+        }
+      } catch (e) {}
+
+      // Fire TV 等のブラウザに永続化（自動お掃除除外）をリクエスト
+      try {
+        if (navigator.storage && navigator.storage.persist) {
+          navigator.storage.persist().catch(() => {});
+        }
+      } catch (e) {}
+
+      syncSettingsToUrl();
+      updateSettingsUI();
+    }
+
+    function saveSettings() {
+      try {
+        localStorage.setItem(SETTINGS_KEY, JSON.stringify(appSettings));
+      } catch (e) {}
+      syncSettingsToUrl();
+      updateSettingsUI();
+    }
+
+    function updateSettingsUI() {
+      const volDisplay = document.getElementById("volDisplay");
+      const btnToggleBeep = document.getElementById("btnToggleBeep");
+      const btnToggleVoice = document.getElementById("btnToggleVoice");
+      const btnToggleSpeed = document.getElementById("btnToggleSpeed");
+      const btnToggleAutoClear = document.getElementById("btnToggleAutoClear");
+      const btnToggleRecordHistory = document.getElementById("btnToggleRecordHistory");
+      const btnClearAllHistory = document.getElementById("btnClearAllHistory");
+
+      if (volDisplay) volDisplay.textContent = Math.round(appSettings.volume * 100) + "%";
+      if (btnToggleBeep) btnToggleBeep.textContent = "🔔 操作音：" + (appSettings.beep ? "ON" : "OFF");
+      if (btnToggleVoice) {
+        btnToggleVoice.textContent = "🗣️ 声の種類：" + (appSettings.voice === "ja-JP-Neural2-D" ? "男性 (Neural2-D)" : "女性 (Neural2-B)");
+      }
+      if (btnToggleSpeed) {
+        const speedLabel = appSettings.speed < 0.95 ? "ゆっくり" : (appSettings.speed > 1.05 ? "はやめ" : "ふつう");
+        btnToggleSpeed.textContent = "⏱️ 話す速さ：" + speedLabel;
+      }
+      if (btnToggleAutoClear) {
+        btnToggleAutoClear.textContent = "🧹 発話後に文字を消す：" + (appSettings.autoClear ? "ON" : "OFF");
+      }
+      if (btnToggleRecordHistory) {
+        btnToggleRecordHistory.textContent = "📝 履歴の記録：" + (appSettings.recordHistory ? "ON" : "OFF");
+      }
+      if (btnClearAllHistory && !confirmClearPending) {
+        btnClearAllHistory.textContent = "🗑️ 履歴を一括削除";
+      }
+    }
+
+    function openSettingsModal() {
+      isSettingsOpen = true;
+      confirmClearPending = false;
+      document.getElementById("settingsModal").classList.add("open");
+      updateSettingsUI();
+      refreshNavElements();
+      currentFocusIndex = 0;
+      updateFocusVisual();
+    }
+
+    function closeSettingsModal() {
+      isSettingsOpen = false;
+      document.getElementById("settingsModal").classList.remove("open");
+      refreshNavElements();
+      const btnSettings = document.getElementById("btnSettings");
+      if (btnSettings && allButtons.includes(btnSettings)) {
+        currentFocusIndex = allButtons.indexOf(btnSettings);
+      }
+      updateFocusVisual();
+    }
+
     function playBeep(freq = 600, duration = 0.04, type = "sine") {
+      if (!appSettings.beep) return;
       try {
         initAudio();
         const osc = audioCtx.createOscillator();
         const gain = audioCtx.createGain();
         osc.type = type;
         osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
-        gain.gain.setValueAtTime(0.12, audioCtx.currentTime);
+        gain.gain.setValueAtTime(0.12 * Math.min(1.0, appSettings.volume), audioCtx.currentTime);
         gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + duration);
         osc.connect(gain);
         gain.connect(audioCtx.destination);
@@ -394,12 +676,188 @@
     }
 
     /* ==========================================================================
+       2-C. 履歴管理 (v1・v2共通、デフォルト自動削除なし)
+       ========================================================================== */
+    const HISTORY_KEY = "tv_native_kb_history";
+    const PIN_KEY = "tv_board_pins";
+    let activePinCandidate = null;
+
+    const DEFAULT_PRESETS = [
+      "はい。",
+      "いいえ。",
+      "痛いです。",
+      "たんを吸引してください。",
+      "体位を変えてください。",
+      "お水を飲みたいです。",
+      "ありがとうございます。"
+    ];
+
+    function getPins() {
+      try {
+        const raw = localStorage.getItem(PIN_KEY);
+        return raw ? JSON.parse(raw) : [];
+      } catch (e) {
+        return [];
+      }
+    }
+
+    function savePins(list) {
+      try {
+        localStorage.setItem(PIN_KEY, JSON.stringify(list));
+      } catch (e) {}
+    }
+
+    function updatePinButtonUI() {
+      const btnPin = document.getElementById("btnPin");
+      if (!btnPin) return;
+      if (!activePinCandidate) {
+        btnPin.style.display = "none";
+        btnPin.disabled = true;
+        btnPin.classList.remove("is-unpin");
+        refreshNavElements();
+        return;
+      }
+
+      const pins = getPins();
+      const isPinned = pins.includes(activePinCandidate);
+      btnPin.style.display = "";
+      btnPin.disabled = false;
+      if (isPinned) {
+        btnPin.textContent = "📌✕";
+        btnPin.title = "ピン解除（アンピン）";
+        btnPin.classList.add("is-unpin");
+      } else {
+        btnPin.textContent = "📌";
+        btnPin.title = "ピン止め";
+        btnPin.classList.remove("is-unpin");
+      }
+      refreshNavElements();
+    }
+
+    function clearPinButton() {
+      if (activePinCandidate !== null) {
+        activePinCandidate = null;
+        updatePinButtonUI();
+      }
+    }
+
+    function togglePinActiveCandidate() {
+      if (!activePinCandidate) return;
+      let pins = getPins();
+      if (pins.includes(activePinCandidate)) {
+        pins = pins.filter(p => p !== activePinCandidate);
+        playBeep(440, 0.06, "sawtooth");
+      } else {
+        pins.unshift(activePinCandidate);
+        playBeep(1000, 0.07, "sine");
+      }
+      savePins(pins);
+      renderPinList();
+      updatePinButtonUI();
+    }
+
+    function selectFromList(phrase, isFromPin = false) {
+      activePinCandidate = phrase;
+      textBox.textContent = phrase;
+      speakText(phrase, true);
+      updatePinButtonUI();
+
+      // DOM再生成やbtnPin表示によるフォーカスズレを防ぎ、選んだ言葉にピタッと留める
+      const selector = isFromPin ? "#pinList .btn-phrase" : "#historyList .btn-phrase";
+      const matched = Array.from(document.querySelectorAll(selector)).find(b => b.textContent === phrase);
+      if (matched && allButtons.includes(matched)) {
+        currentFocusIndex = allButtons.indexOf(matched);
+        updateFocusVisual();
+      }
+    }
+
+    function renderPinList() {
+      const section = document.getElementById("pinSection");
+      const container = document.getElementById("pinList");
+      if (!section || !container) return;
+
+      const pins = getPins();
+      container.innerHTML = "";
+
+      if (!pins || pins.length === 0) {
+        section.style.display = "none";
+        refreshNavElements();
+        return;
+      }
+
+      section.style.display = "flex";
+      pins.forEach(phrase => {
+        const btn = document.createElement("button");
+        btn.className = "btn-phrase btn-pin-item";
+        btn.textContent = phrase;
+        btn.addEventListener("click", () => selectFromList(phrase, true));
+        container.appendChild(btn);
+      });
+      refreshNavElements();
+    }
+
+    function getHistory() {
+      try {
+        const raw = localStorage.getItem(HISTORY_KEY);
+        if (raw === null) {
+          localStorage.setItem(HISTORY_KEY, JSON.stringify(DEFAULT_PRESETS));
+          return DEFAULT_PRESETS;
+        }
+        return JSON.parse(raw);
+      } catch (e) {
+        return DEFAULT_PRESETS;
+      }
+    }
+
+    function saveHistorySentence(text) {
+      if (!appSettings.recordHistory) return;
+      if (!text || !text.trim()) return;
+      const trimmed = text.trim();
+      let list = getHistory();
+      list = list.filter(item => item !== trimmed);
+      list.unshift(trimmed); // 新しい発話を一番上に追加（自動削除なし）
+      try {
+        localStorage.setItem(HISTORY_KEY, JSON.stringify(list));
+      } catch (e) {}
+      renderHistoryList();
+    }
+
+    function clearAllHistory() {
+      try {
+        localStorage.setItem(HISTORY_KEY, JSON.stringify([]));
+      } catch (e) {}
+      renderHistoryList();
+    }
+
+    function renderHistoryList() {
+      const container = document.getElementById("historyList");
+      if (!container) return;
+      container.innerHTML = "";
+      const list = getHistory();
+      if (!list || list.length === 0) {
+        const empty = document.createElement("div");
+        empty.className = "history-empty";
+        empty.textContent = "履歴はありません";
+        container.appendChild(empty);
+        refreshNavElements();
+        return;
+      }
+      list.forEach(phrase => {
+        const btn = document.createElement("button");
+        btn.className = "btn-phrase";
+        btn.textContent = phrase;
+        btn.addEventListener("click", () => selectFromList(phrase, false));
+        container.appendChild(btn);
+      });
+      refreshNavElements();
+    }
+
+    /* ==========================================================================
        3. 空間フォーカス・ナビゲーション管理
        ========================================================================== */
     let allButtons = [];
     let currentFocusIndex = 0;
     const textBox = document.getElementById("textBox");
-    const suggestList = document.getElementById("suggestList");
     const keyGrid = document.getElementById("keyGrid");
     const ttsStatus = document.getElementById("ttsStatus");
 
@@ -413,7 +871,7 @@
           btn.textContent = char;
           btn.className = "btn-key";
           btn.tabIndex = 0;
-          if (char === "゛゜小" || char === "（" || char === "）" || char === "ー") {
+          if (char === "゛゜小" || char === "、" || char === "。" || char === "ー") {
             btn.classList.add("btn-mod");
           }
           btn.addEventListener("click", () => handleKeyInput(char));
@@ -425,7 +883,14 @@
     // フォーカス可能な全要素を収集して座標を更新
     function refreshNavElements() {
       const activeElement = allButtons[currentFocusIndex];
-      allButtons = Array.from(document.querySelectorAll("button:not([disabled])"));
+      document.querySelectorAll("button.focused").forEach(b => b.classList.remove("focused"));
+
+      if (isSettingsOpen) {
+        allButtons = Array.from(document.querySelectorAll("#settingsModal .setting-btn:not([disabled])"));
+      } else {
+        allButtons = Array.from(document.querySelectorAll("button:not(.setting-btn):not([disabled])"));
+      }
+
       allButtons.forEach(b => {
         b.tabIndex = 0;
       });
@@ -456,49 +921,31 @@
       if (!allButtons.length) return;
       const currentBtn = allButtons[currentFocusIndex];
 
-      // ★要件1：50音表の「あ段（あ・か・さ・た・な・は・ま・や・ら・わ）」から「上」を押した時は、
-      // 変換候補があれば【必ず変換候補の1番最初】へジャンプ！
-      const aDanKeys = ["あ", "か", "さ", "た", "な", "は", "ま", "や", "ら", "わ"];
-      if (direction === "up" && currentBtn.classList.contains("btn-key") && aDanKeys.includes(currentBtn.textContent)) {
-        const firstSuggest = document.querySelector(".btn-suggest");
-        if (firstSuggest && allButtons.includes(firstSuggest)) {
-          currentFocusIndex = allButtons.indexOf(firstSuggest);
-          playBeep(480, 0.03, "sine");
-          updateFocusVisual();
-          return;
-        }
+      // お段（50音表の最下行）にいる時に「下」を押してもどこにも移動しない
+      const oDanKeys = ["お", "こ", "そ", "と", "の", "ほ", "も", "よ", "ろ", "゛゜小"];
+      if (!isSettingsOpen && direction === "down" && currentBtn.classList.contains("btn-key") && oDanKeys.includes(currentBtn.textContent)) {
+        return;
       }
 
-      // 特例ルール：予測変換ボタンにいる状態で「上」を押した時は、確実に「🗣️ はなす」へ直接移動
-      if (direction === "up" && currentBtn.classList.contains("btn-suggest")) {
-        const btnSpeak = document.getElementById("btnSpeak");
-        if (btnSpeak && allButtons.includes(btnSpeak)) {
-          currentFocusIndex = allButtons.indexOf(btnSpeak);
-          playBeep(480, 0.03, "sine");
-          updateFocusVisual();
+      // ピン・履歴パネル内のボタン（.btn-phrase）にいる時は、上下移動で1つずつ確実にスクロール移動する
+      if (!isSettingsOpen && currentBtn.classList.contains("btn-phrase")) {
+        const leftBtns = Array.from(document.querySelectorAll("#pinList .btn-phrase, #historyList .btn-phrase"));
+        const hIdx = leftBtns.indexOf(currentBtn);
+        if (direction === "down") {
+          if (hIdx >= 0 && hIdx < leftBtns.length - 1) {
+            currentFocusIndex = allButtons.indexOf(leftBtns[hIdx + 1]);
+            playBeep(480, 0.03, "sine");
+            updateFocusVisual();
+          }
           return;
-        }
-      }
-
-      // 特例ルール：ヘッダーボタン（はなす・消す）にいる状態で「下」を押した時は、予測変換があれば先頭へ、無ければ50音表の「あ」へ
-      if (direction === "down" && currentBtn.classList.contains("btn-action")) {
-        const firstSuggest = document.querySelector(".btn-suggest");
-        if (firstSuggest && allButtons.includes(firstSuggest)) {
-          currentFocusIndex = allButtons.indexOf(firstSuggest);
-          playBeep(480, 0.03, "sine");
-          updateFocusVisual();
-          return;
-        }
-      }
-
-      // 特例ルール：予測変換にいる状態で「下」を押した時は、50音表の「あ」へ戻る
-      if (direction === "down" && currentBtn.classList.contains("btn-suggest")) {
-        const aKey = Array.from(document.querySelectorAll(".btn-key")).find(b => b.textContent === "あ");
-        if (aKey && allButtons.includes(aKey)) {
-          currentFocusIndex = allButtons.indexOf(aKey);
-          playBeep(480, 0.03, "sine");
-          updateFocusVisual();
-          return;
+        } else if (direction === "up") {
+          if (hIdx > 0) {
+            currentFocusIndex = allButtons.indexOf(leftBtns[hIdx - 1]);
+            playBeep(480, 0.03, "sine");
+            updateFocusVisual();
+            return;
+          }
+          // 先頭（hIdx === 0）にいる時に「上」を押したら、通常の2D探索で上の操作ボタンへ移動
         }
       }
 
@@ -511,9 +958,19 @@
       let bestIndex = -1;
       let minDistance = Infinity;
 
+      const leftScrollArea = document.querySelector(".left-scroll-area");
+      const leftScrollRect = leftScrollArea ? leftScrollArea.getBoundingClientRect() : null;
+
       allButtons.forEach((targetBtn, idx) => {
         if (idx === currentFocusIndex) return;
         const targetRect = targetBtn.getBoundingClientRect();
+
+        // 50音表等から左パネル（ピン/履歴）へ移る時は、現在画面内に見えているボタンのみ候補にする
+        if (!isSettingsOpen && !currentBtn.classList.contains("btn-phrase") && targetBtn.classList.contains("btn-phrase") && leftScrollRect) {
+          if (targetRect.bottom <= leftScrollRect.top + 8 || targetRect.top >= leftScrollRect.bottom - 8) {
+            return;
+          }
+        }
         const targetCenter = {
           x: targetRect.left + targetRect.width / 2,
           y: targetRect.top + targetRect.height / 2
@@ -562,6 +1019,7 @@
        ========================================================================== */
     function handleKeyInput(char) {
       playBeep(880, 0.06, "triangle");
+      clearPinButton();
 
       if (char === "゛゜小") {
         // 直前文字の濁点・半濁点・小文字トグル
@@ -569,7 +1027,7 @@
       } else {
         textBox.textContent += char;
       }
-      updateSuggestions();
+      textBox.scrollLeft = textBox.scrollWidth;
     }
 
     // 濁点・半濁点・小文字のトグル変換
@@ -590,211 +1048,87 @@
     // 1文字消去
     function backspace() {
       playBeep(320, 0.05, "sawtooth");
+      clearPinButton();
       const text = textBox.textContent;
       if (text.length > 0) {
         textBox.textContent = text.slice(0, -1);
-        updateSuggestions();
+        textBox.scrollLeft = textBox.scrollWidth;
       }
     }
 
     // 全消去
     function clearText() {
       playBeep(260, 0.08, "sawtooth");
+      clearPinButton();
       textBox.textContent = "";
-      updateSuggestions();
     }
 
-    // 予測変換・漢字変換候補の更新（Google日本語入力 CGI API ＋ 内蔵辞書ハイブリッド）
-    let jsonpCounter = 0;
-    let lastQueryText = "";
-
-    function updateSuggestions() {
-      suggestList.innerHTML = "";
-      const text = textBox.textContent;
-      if (!text.length) {
-        refreshNavElements();
-        return;
-      }
-
-      // 直近の入力ひらがな（最大10文字程度）
-      const query = text.slice(-8);
-      lastQueryText = query;
-
-      // 1. まず内蔵辞書から即時候補を生成して仮表示（遅延ゼロ）
-      const immediateList = getLocalCandidates(query, text);
-      renderSuggestButtons(immediateList, query);
-
-      // 2. Google CGI API for Japanese Input (JSONP) を非同期リクエスト
-      fetchGoogleIME(query);
-    }
-
-    // 内蔵の緊急・日常・医療辞書（オフラインでも超強力に動くフォールバック）
-    function getLocalCandidates(query, fullText) {
-      const candidates = new Set();
-      const last1 = query.slice(-1);
-      const last2 = query.slice(-2);
-
-      // 簡易漢字・常用語辞書
-      const DICT = {
-        "あり": ["ありがとう", "有難うございます"],
-        "あたま": ["頭が痛い", "頭"],
-        "いた": ["痛いです", "痛い", "痛み止め"],
-        "おね": ["お願いします", "お願い"],
-        "おみ": ["お水", "お水が飲みたい"],
-        "おちゃ": ["お茶", "温かいお茶"],
-        "きゅう": ["吸引してください", "吸引"],
-        "くる": ["苦しいです", "苦しい"],
-        "たい": ["体位変換", "体位を変えて", "動かして"],
-        "すい": ["水分", "吸ってください"],
-        "たん": ["たんを取って", "痰"],
-        "てれ": ["テレビをつけて", "テレビを消して"],
-        "とい": ["トイレ", "トイレに行きたい"],
-        "ねむ": ["眠いです", "眠れない"],
-        "のど": ["喉が渇いた", "喉"],
-        "あ": ["ありがとう", "あたまが痛い", "あつい"],
-        "い": ["いたい", "いいえ", "いしゃ"],
-        "う": ["うえを向きたい", "うごけない"],
-        "え": ["えあこん", "えがお"],
-        "お": ["おねがい", "お水", "お茶"],
-        "か": ["かゆい", "からだが痛い"],
-        "き": ["きゅういん", "きもちわるい"],
-        "く": ["くるしい", "くびが痛い"],
-        "け": ["けいたい", "けいれん"],
-        "こ": ["こしが痛い", "こわい"],
-        "さ": ["さむい", "さわって"],
-        "し": ["しんどい", "しびれる"],
-        "す": ["すこし待って", "すわりたい"],
-        "せ": ["せなかが痛い"],
-        "そ": ["そのままで"],
-        "た": ["たんを取って", "たすけて"],
-        "ち": ["ちかくにいて"],
-        "つ": ["つらい", "つめたい"],
-        "て": ["てが痛い", "テレビ"],
-        "と": ["トイレ", "とめて"],
-        "な": ["なんでもない"],
-        "に": ["にくたい", "にがい"],
-        "ぬ": ["ぬるい"],
-        "ね": ["ねむい", "ねつがある"],
-        "の": ["のどが渇いた"],
-        "は": ["はい", "はなして"],
-        "ひ": ["ひやして"],
-        "ふ": ["ふとんをかけて"],
-        "へ": ["へやがあつい"],
-        "ほ": ["ほんとうに"],
-        "ま": ["まくらを直して"],
-        "み": ["みず", "みぎ"],
-        "む": ["むねが苦しい"],
-        "め": ["めが痛い", "めがね"],
-        "も": ["もういいです"],
-        "や": ["やすみたい"],
-        "ゆ": ["ゆっくり"],
-        "よ": ["よんでほしい"],
-        "ら": ["らくになりたい"],
-        "り": ["りょうかい"],
-        "る": ["るすばん"],
-        "れ": ["れんらく"],
-        "ろ": ["ろうか"],
-        "わ": ["わかりました"]
-      };
-
-      if (DICT[last2]) DICT[last2].forEach(w => candidates.add(w));
-      if (DICT[last1]) DICT[last1].forEach(w => candidates.add(w));
-
-      return Array.from(candidates);
-    }
-
-    // Google日本語入力 CGI API の呼び出し
-    function fetchGoogleIME(query) {
-      if (!query || query.length === 0) return;
-      const cbName = "googleImeCb_" + (++jsonpCounter);
-      
-      const script = document.createElement("script");
-      script.id = cbName;
-      script.src = `https://www.google.com/transliterate?langpair=ja-Hira|ja&text=${encodeURIComponent(query)}&jsonp=${cbName}`;
-
-      window[cbName] = (data) => {
-        try {
-          if (query === lastQueryText && Array.isArray(data)) {
-            const googleResults = [];
-            data.forEach(segment => {
-              if (segment && segment[1] && Array.isArray(segment[1])) {
-                segment[1].forEach(cand => googleResults.push(cand));
-              }
-            });
-
-            if (googleResults.length > 0) {
-              // Googleの変換結果を最優先に統合
-              const merged = Array.from(new Set([...googleResults, ...getLocalCandidates(query, textBox.textContent)]));
-              renderSuggestButtons(merged, query);
-            }
-          }
-        } finally {
-          delete window[cbName];
-          script.remove();
-        }
-      };
-
-      script.onerror = () => {
-        delete window[cbName];
-        script.remove();
-      };
-
-      document.body.appendChild(script);
-    }
-
-    // 候補ボタンの描画
-    function renderSuggestButtons(list, query) {
-      suggestList.innerHTML = "";
-      if (!list || !list.length) {
-        refreshNavElements();
-        return;
-      }
-
-      list.slice(0, 8).forEach(word => {
-        const btn = document.createElement("button");
-        btn.className = "btn-suggest";
-        btn.textContent = word;
-        btn.addEventListener("click", () => {
-          playBeep(1000, 0.07, "triangle");
-          // 入力中の末尾クエリ部分を決定した漢字・語句に置換
-          const full = textBox.textContent;
-          if (full.endsWith(query)) {
-            textBox.textContent = full.slice(0, full.length - query.length) + word;
-          } else {
-            textBox.textContent += word;
-          }
-          speakText(textBox.textContent);
-          updateSuggestions();
-        });
-        suggestList.appendChild(btn);
-      });
-
-      refreshNavElements();
-    }
     /* ==========================================================================
-       5. 音声読み上げ (Google Cloud Neural2-D ＋ Cloudflare Workers)
+       5. 音声読み上げ (Google Cloud Neural2 ＋ Cloudflare Workers ＋ 300%ブースト)
        ========================================================================== */
-    const CLOUD_TTS_ENDPOINT = "https://tv-speech-api.ryota-nemottuan.workers.dev/?voice=ja-JP-Neural2-D&text=";
+    const CLOUD_TTS_BASE = "https://tv-speech-api.ryota-nemottuan.workers.dev/";
     let ttsAudio = new Audio();
+    ttsAudio.crossOrigin = "anonymous";
+    let ttsGainNode = null;
+    let ttsSourceConnected = false;
 
-    function speakText(text) {
+    function setupTtsAudioGraph() {
+      if (ttsSourceConnected) {
+        if (ttsGainNode) ttsGainNode.gain.value = appSettings.volume;
+        return;
+      }
+      try {
+        initAudio();
+        const source = audioCtx.createMediaElementSource(ttsAudio);
+        ttsGainNode = audioCtx.createGain();
+        const compressor = audioCtx.createDynamicsCompressor();
+        compressor.threshold.setValueAtTime(-12, audioCtx.currentTime);
+        compressor.knee.setValueAtTime(10, audioCtx.currentTime);
+        compressor.ratio.setValueAtTime(8, audioCtx.currentTime);
+        compressor.attack.setValueAtTime(0.003, audioCtx.currentTime);
+        compressor.release.setValueAtTime(0.15, audioCtx.currentTime);
+
+        ttsGainNode.gain.value = appSettings.volume;
+        source.connect(ttsGainNode);
+        ttsGainNode.connect(compressor);
+        compressor.connect(audioCtx.destination);
+        ttsSourceConnected = true;
+      } catch (e) {}
+    }
+
+    function speakText(text, fromList = false) {
       if (!text || !text.trim()) return;
+      if (!fromList) {
+        clearPinButton();
+      }
       playBeep(1200, 0.08, "sine");
 
       if (typeof saveHistorySentence === "function") {
         saveHistorySentence(text);
       }
 
+      const displayRow = document.querySelector(".display-row");
+      if (displayRow) displayRow.classList.add("speaking");
       if (ttsStatus) ttsStatus.textContent = "読み上げ中...";
 
       try {
-        const url = CLOUD_TTS_ENDPOINT + encodeURIComponent(text.trim());
+        setupTtsAudioGraph();
+        const url = `${CLOUD_TTS_BASE}?voice=${encodeURIComponent(appSettings.voice)}&text=${encodeURIComponent(text.trim())}`;
         ttsAudio.src = url;
-        ttsAudio.play().then(() => {
-          ttsAudio.onended = () => {
-            if (ttsStatus) ttsStatus.textContent = "待機中";
-          };
-        }).catch(err => {
+        ttsAudio.volume = ttsSourceConnected ? 1.0 : Math.min(1.0, appSettings.volume);
+        ttsAudio.playbackRate = appSettings.speed;
+        ttsAudio.onended = () => {
+          if (displayRow) displayRow.classList.remove("speaking");
+          if (ttsStatus) ttsStatus.textContent = "待機中";
+          if (appSettings.autoClear) {
+            textBox.textContent = "";
+          }
+        };
+        ttsAudio.onerror = () => {
+          if (displayRow) displayRow.classList.remove("speaking");
+          fallbackLocalTTS(text);
+        };
+        ttsAudio.play().catch(err => {
           fallbackLocalTTS(text);
         });
       } catch(e) {
@@ -803,14 +1137,25 @@
     }
 
     function fallbackLocalTTS(text) {
+      const displayRow = document.querySelector(".display-row");
       if ('speechSynthesis' in window) {
         window.speechSynthesis.cancel();
         const utter = new SpeechSynthesisUtterance(text);
         utter.lang = 'ja-JP';
-        utter.onend = () => { if (ttsStatus) ttsStatus.textContent = "待機中"; };
-        utter.onerror = () => { if (ttsStatus) ttsStatus.textContent = "待機中"; };
+        utter.volume = Math.min(1.0, appSettings.volume);
+        utter.rate = appSettings.speed;
+        utter.onend = () => {
+          if (displayRow) displayRow.classList.remove("speaking");
+          if (ttsStatus) ttsStatus.textContent = "待機中";
+          if (appSettings.autoClear) textBox.textContent = "";
+        };
+        utter.onerror = () => {
+          if (displayRow) displayRow.classList.remove("speaking");
+          if (ttsStatus) ttsStatus.textContent = "待機中";
+        };
         window.speechSynthesis.speak(utter);
       } else {
+        if (displayRow) displayRow.classList.remove("speaking");
         if (ttsStatus) ttsStatus.textContent = "待機中";
       }
     }
@@ -871,7 +1216,11 @@
         case "BrowserBack":
         case "Escape":
           e.preventDefault();
-          backspace();
+          if (isSettingsOpen) {
+            closeSettingsModal();
+          } else {
+            backspace();
+          }
           break;
       }
     });
@@ -908,7 +1257,13 @@
         checkBtn(0, () => {
           if (allButtons[currentFocusIndex]) allButtons[currentFocusIndex].click();
         });
-        checkBtn(1, () => backspace());
+        checkBtn(1, () => {
+          if (isSettingsOpen) {
+            closeSettingsModal();
+          } else {
+            backspace();
+          }
+        });
 
         // 2. スティックのアナログ入力（倒した方向）
         if (gp.axes && gp.axes.length >= 2 && now - lastAxesTime > 220) {
@@ -937,22 +1292,90 @@
        8. 初期化処理
        ========================================================================== */
     window.addEventListener("DOMContentLoaded", () => {
+      loadSettings();
       createKeyGrid();
+      renderPinList();
+      renderHistoryList();
 
       // ヘッダー操作ボタンの登録
+      document.getElementById("btnPin").addEventListener("click", togglePinActiveCandidate);
       document.getElementById("btnSpeak").addEventListener("click", () => {
-        speakText(textBox.textContent);
+        speakText(textBox.textContent, false);
       });
       document.getElementById("btnBack").addEventListener("click", backspace);
       document.getElementById("btnClear").addEventListener("click", clearText);
+      document.getElementById("btnSettings").addEventListener("click", () => {
+        playBeep(880, 0.06, "sine");
+        openSettingsModal();
+      });
 
-      // 左側定型文ボタンの登録
-      document.querySelectorAll(".btn-phrase").forEach(btn => {
-        btn.addEventListener("click", () => {
-          const phrase = btn.getAttribute("data-text");
-          textBox.textContent = phrase;
-          speakText(phrase);
-        });
+      // 設定モーダル内ボタンの登録
+      document.getElementById("btnModeSwitch").addEventListener("click", () => {
+        playBeep(880, 0.06, "sine");
+        window.location.href = "v2.html" + window.location.search;
+      });
+      document.getElementById("btnVolDown").addEventListener("click", () => {
+        const step = appSettings.volume <= 1.01 ? 0.1 : 0.2;
+        appSettings.volume = Math.max(0.1, Math.round((appSettings.volume - step) * 10) / 10);
+        if (ttsGainNode) ttsGainNode.gain.value = appSettings.volume;
+        saveSettings();
+        playBeep(660, 0.06, "sine");
+      });
+      document.getElementById("btnVolUp").addEventListener("click", () => {
+        const step = appSettings.volume < 0.99 ? 0.1 : 0.2;
+        appSettings.volume = Math.min(3.0, Math.round((appSettings.volume + step) * 10) / 10);
+        if (ttsGainNode) ttsGainNode.gain.value = appSettings.volume;
+        saveSettings();
+        playBeep(880, 0.06, "sine");
+      });
+      document.getElementById("btnToggleBeep").addEventListener("click", () => {
+        appSettings.beep = !appSettings.beep;
+        saveSettings();
+        if (appSettings.beep) playBeep(880, 0.06, "sine");
+      });
+      document.getElementById("btnToggleVoice").addEventListener("click", () => {
+        appSettings.voice = (appSettings.voice === "ja-JP-Neural2-D") ? "ja-JP-Neural2-B" : "ja-JP-Neural2-D";
+        saveSettings();
+        playBeep(880, 0.06, "sine");
+      });
+      document.getElementById("btnToggleSpeed").addEventListener("click", () => {
+        if (appSettings.speed < 0.95) appSettings.speed = 1.0;
+        else if (appSettings.speed < 1.05) appSettings.speed = 1.2;
+        else appSettings.speed = 0.85;
+        saveSettings();
+        playBeep(880, 0.06, "sine");
+      });
+      document.getElementById("btnToggleAutoClear").addEventListener("click", () => {
+        appSettings.autoClear = !appSettings.autoClear;
+        saveSettings();
+        playBeep(880, 0.06, "sine");
+      });
+      document.getElementById("btnToggleRecordHistory").addEventListener("click", () => {
+        appSettings.recordHistory = !appSettings.recordHistory;
+        saveSettings();
+        playBeep(880, 0.06, "sine");
+      });
+      document.getElementById("btnClearAllHistory").addEventListener("click", () => {
+        const btn = document.getElementById("btnClearAllHistory");
+        if (!confirmClearPending) {
+          confirmClearPending = true;
+          btn.textContent = "⚠️ 本当に削除？（もう1回押す）";
+          playBeep(440, 0.08, "sawtooth");
+        } else {
+          confirmClearPending = false;
+          clearAllHistory();
+          btn.textContent = "✓ 削除しました";
+          playBeep(300, 0.08, "sawtooth");
+          setTimeout(() => {
+            if (!confirmClearPending && document.getElementById("btnClearAllHistory")) {
+              document.getElementById("btnClearAllHistory").textContent = "🗑️ 履歴を一括削除";
+            }
+          }, 1500);
+        }
+      });
+      document.getElementById("btnCloseSettings").addEventListener("click", () => {
+        playBeep(520, 0.06, "sine");
+        closeSettingsModal();
       });
 
       refreshNavElements();
@@ -965,7 +1388,7 @@
       }
 
       initWakeLockVideo();
-      ttsStatus.textContent = "準備完了（リモコン操作可能）";
+      if (ttsStatus) ttsStatus.textContent = "準備完了（リモコン操作可能）";
 
       // ページ全体のどこかをクリックしたら即座に現在のマスにフォーカスを戻す
       window.addEventListener("pointerdown", () => {
