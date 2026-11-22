@@ -488,7 +488,7 @@
     const DAKUTEN_MAP = {
       "か":"が","き":"ぎ","く":"ぐ","け":"げ","こ":"ご",
       "さ":"ざ","し":"じ","す":"ず","せ":"ぜ","そ":"ぞ",
-      "た":"だ","ち":"ぢ","つ":"づ","て":"で","と":"ど",
+      "た":"だ","ち":"ぢ","つ":"っ","っ":"づ","て":"で","と":"ど",
       "は":"ば","ひ":"び","ふ":"ぶ","へ":"べ","ほ":"ぼ",
       // 逆変換
       "が":"か","ぎ":"き","ぐ":"く","げ":"け","ご":"こ",
@@ -1096,11 +1096,10 @@
       } catch (e) {}
     }
 
-    function speakText(text, fromList = false) {
+    function speakText(text) {
       if (!text || !text.trim()) return;
-      if (!fromList) {
-        clearPinButton();
-      }
+      activePinCandidate = text.trim();
+      updatePinButtonUI();
       playBeep(1200, 0.08, "sine");
 
       if (typeof saveHistorySentence === "function") {
